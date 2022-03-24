@@ -75,5 +75,5 @@ describe('Serum', function() {
 	it('owner setPaused success', async function() {
 		await this.serum.connect(this.owner).setPaused(true);
 		expect(await this.serum.paused()).to.equal(true);
-	})
+	});
 });
