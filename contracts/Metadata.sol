@@ -4,9 +4,11 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
-import "./ILabGame.sol";
+import "./interfaces/IMetadata.sol";
+import "./interfaces/ILabGame.sol";
 
-contract Metadata is Ownable {
+
+contract Metadata is IMetadata, Ownable {
 	using Strings for uint256;
 	using Base64 for bytes;
 

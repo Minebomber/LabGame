@@ -4,8 +4,9 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "./interfaces/ISerum.sol";
 
-contract Serum is ERC20, AccessControl, Pausable {
+contract Serum is ISerum, ERC20, AccessControl, Pausable {
 	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
 	/**
