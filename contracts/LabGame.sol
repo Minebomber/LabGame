@@ -4,13 +4,16 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 
 import "./interfaces/ILabGame.sol";
 import "./interfaces/ISerum.sol";
 import "./interfaces/IMetadata.sol";
 import "./interfaces/IStaking.sol";
 
-contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable {
+contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 
 	uint256 constant GEN0_PRICE = 0.06 ether;
 	uint256 constant GEN1_PRICE = 2_000 ether;
@@ -30,13 +33,42 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable {
 	mapping(uint256 => TokenData) tokens;
 	mapping(uint256 => uint256) hashes;
 
+	struct TokenRequest {
+		address minter;
+		uint256 tokenId;
+	}
+	mapping(uint256 => TokenRequest) pending;
+
 	ISerum serum;
 	IMetadata metadata;
 	IStaking staking;
 
-	constructor(string memory name,	string memory symbol, address serumAddress, address metadataAddress) ERC721(name, symbol) {
+	VRFCoordinatorV2Interface vrfCoordinator;
+	uint64 vrfSubscriptionId;
+	LinkTokenInterface linkToken;
+	bytes32 vrfKeyHash;
+
+	event GenerateRequest(address minter, uint256 tokenId);
+	event GenerateFulfilled(uint256 tokenId);
+
+	constructor(
+		string memory name,
+		string memory symbol,
+		address serumAddress,
+		address metadataAddress,
+		address vrfCoordinatorAddress,
+		address linkAddress,
+		bytes32 keyHash
+	) ERC721(name, symbol) {
+
 		serum = ISerum(serumAddress);
 		metadata = IMetadata(metadataAddress);
+
+		vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorAddress);
+		vrfSubscriptionId = vrfCoordinator.createSubscription();
+		vrfCoordinator.addConsumer(vrfSubscriptionId, address(this));
+		linkToken = LinkTokenInterface(linkAddress);
+		vrfKeyHash = keyHash;
 	}
 
 	modifier verifyMint(uint256 amount, bool stake) {
@@ -65,14 +97,31 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable {
 	// -- EXTERNAL --
 
 	function mint(uint256 amount, bool stake) external payable whenNotPaused verifyMint(amount, stake) {
-		uint id = totalSupply();
-		uint16[] memory tokenIds = stake ? new uint16[](amount) : new uint16[](0);
+		uint tokenId = totalSupply();
 		for (uint256 i; i < amount; i++) {
-			id++;
-			_safeMint(_msgSender(), id);
-			if (stake) tokenIds[i] = uint16(id);
+			tokenId++;
+			uint256 requestId = vrfCoordinator.requestRandomWords(
+				vrfKeyHash,
+				vrfSubscriptionId,
+				3,				// Confirmations
+				100000,		// Gas limit
+				1					// n words
+			);
+			pending[requestId] = TokenRequest(_msgSender(), tokenId);
+			emit GenerateRequest(_msgSender(), tokenId);
 		}
-		if (stake) staking.add(tokenIds);
+	}
+
+	function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
+		TokenRequest memory req = pending[requestId];
+		generateToken(req.tokenId, randomWords[0]);
+		_safeMint(req.minter, req.tokenId);
+		emit GenerateFulfilled(req.tokenId);
+		delete pending[requestId];
+	}
+
+	function generateToken(uint256 tokenId, uint256 random) internal {
+		//TODO: tokens[tokenId], hashes[dataHash] == 0
 	}
 
 	function tokenURI(uint256 tokenId) public view override returns (string memory) {
@@ -122,6 +171,18 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable {
 	}
 
 	// -- OWNER --
+
+	function fundSubscription(uint256 amount) external onlyOwner {
+		linkToken.transferAndCall(
+			address(vrfCoordinator),
+			amount,
+			abi.encode(vrfSubscriptionId)
+		);
+	}
+
+	function cancelVRFSubscription() external onlyOwner {
+		vrfCoordinator.cancelSubscription(vrfSubscriptionId, msg.sender);
+	}
 
 	function addWhitelisted(address addr) external onlyOwner {
 		whitelist[addr] = true;
