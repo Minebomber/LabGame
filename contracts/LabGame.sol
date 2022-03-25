@@ -37,7 +37,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		address minter;
 		uint256 tokenId;
 	}
-	mapping(uint256 => TokenRequest) pending;
+	mapping(uint256 => TokenRequest) pendingRequests;
 
 	ISerum serum;
 	IMetadata metadata;
@@ -59,7 +59,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		address vrfCoordinatorAddress,
 		address linkAddress,
 		bytes32 keyHash
-	) ERC721(name, symbol) {
+	) ERC721(name, symbol) VRFConsumerBaseV2(vrfCoordinatorAddress) {
 
 		serum = ISerum(serumAddress);
 		metadata = IMetadata(metadataAddress);
@@ -107,17 +107,17 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 				100000,		// Gas limit
 				1					// n words
 			);
-			pending[requestId] = TokenRequest(_msgSender(), tokenId);
+			pendingRequests[requestId] = TokenRequest(_msgSender(), tokenId);
 			emit GenerateRequest(_msgSender(), tokenId);
 		}
 	}
 
 	function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
-		TokenRequest memory req = pending[requestId];
+		TokenRequest memory req = pendingRequests[requestId];
 		generateToken(req.tokenId, randomWords[0]);
 		_safeMint(req.minter, req.tokenId);
 		emit GenerateFulfilled(req.tokenId);
-		delete pending[requestId];
+		delete pendingRequests[requestId];
 	}
 
 	function generateToken(uint256 tokenId, uint256 random) internal {
