@@ -77,8 +77,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable {
 
 	function tokenURI(uint256 tokenId) public view override returns (string memory) {
 		require(_exists(tokenId), "URI query for nonexistent token");
-		//TODO: Implement
-		return "token.uri";
+		return metadata.tokenURI(tokenId);
 	}
 
 	function getTokenData(uint256 tokenId) external view override returns (TokenData memory) {

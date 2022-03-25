@@ -8,12 +8,10 @@ async function deployContract(name, ...args) {
 }
 
 async function main () {
-	/*
 	const Serum = await deployContract('Serum', 'Serum', 'SERUM');
 	const Metadata = await deployContract('Metadata');
-	const Game = await deployContract('LabGame', 'LabGame', 'LABGAME', Token.address, Metadata.address);
-	const Staking = await deployContract('Staking', Game.address, Token.address);
-	*/
+	const Game = await deployContract('LabGame', 'LabGame', 'LABGAME', Serum.address, Metadata.address);
+	const Staking = await deployContract('Staking', Game.address, Serum.address);
 }
 
 main()
