@@ -21,26 +21,6 @@ contract Metadata is IMetadata, Ownable {
 	string constant IMAGE_WIDTH = "40";
 	string constant IMAGE_HEIGHT = "40";
 
-	string[MAX_TRAITS] TRAIT_NAMES = [
-		"Background",
-		"Scientist Type",
-		"Shoes",
-		"Shirt",
-		"Pants",
-		"Coat",
-		"Goggles",
-		"Hair",
-		"Serum",
-		"Background",
-		"Mutant Color",
-		"Human Type",
-		"Wrist",
-		"Eye",
-		"Shoes",
-		"Pants",
-		"Arm"
-	];
-
 	struct Trait {
 		string name;
 		string image;
@@ -58,7 +38,7 @@ contract Metadata is IMetadata, Ownable {
 	 * @param tokenId token id
 	 * @return token metadata as a base64 json uri
 	 */
-	function tokenURI(uint256 tokenId) external view returns (string memory) {
+	function tokenURI(uint256 tokenId) external view override returns (string memory) {
 		ILabGame.TokenData memory tokenData = labGame.getTokenData(tokenId);
 		return string(abi.encodePacked(
 			'data:application/json;base64,',
@@ -66,7 +46,7 @@ contract Metadata is IMetadata, Ownable {
 				'{"name":"', ((tokenData.generation & 128) != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', tokenId.toString(),
 				'","description":"', DESCRIPTION,
 				'","image":"data:image/svg+xml;base64,', bytes(tokenImage(tokenData)).encode(),
-				'","attributes":"', tokenAttributes(tokenData),
+				'","attributes":', tokenAttributes(tokenData),
 				'}'
 			).encode()
 		));
@@ -80,8 +60,23 @@ contract Metadata is IMetadata, Ownable {
 	 * @return SVG image string for the token
 	 */
 	function tokenImage(ILabGame.TokenData memory tokenData) internal view returns (bytes memory) {
-		// TODO: Implement
-		return bytes('');
+		uint256 start = ((tokenData.generation & 128) != 0) ? TYPE_OFFSET : 0;
+		uint256 end = (start == 0) ? TYPE_OFFSET : MAX_TRAITS;
+		uint256 nTraits = end - start;
+		bytes memory images;
+		for (uint256 i; i < nTraits; i++) {
+			images = abi.encodePacked(
+				images,
+				'<image x="0" y="0" width="', IMAGE_WIDTH, '" height="', IMAGE_HEIGHT, '" image-rendering="pixelated" preserveAspectRatio="xMidYMid" href="data:image/png;base64,',
+				traits[start + i][tokenData.trait[i]].image,
+				'"/>'
+			);
+		}
+		return abi.encodePacked(
+			'<svg id="token" width="100%" height="100%" viewBox="0 0 ', IMAGE_WIDTH, ' ', IMAGE_HEIGHT, '" xmlns="http://www.w3.org/2000/svg">',
+			images,
+			'</svg>'
+		);
 	}
 
 	/**
@@ -90,8 +85,45 @@ contract Metadata is IMetadata, Ownable {
 	 * @return JSON string of token attributes
 	 */
 	function tokenAttributes(ILabGame.TokenData memory tokenData) internal view returns (bytes memory) {
-		// TODO: Implement
-		return bytes('');
+		string[MAX_TRAITS] memory TRAIT_NAMES = [
+			"Background",
+			"Scientist Type",
+			"Shoes",
+			"Shirt",
+			"Pants",
+			"Coat",
+			"Goggles",
+			"Hair",
+			"Serum",
+			"Background",
+			"Mutant Color",
+			"Human Type",
+			"Wrist",
+			"Eye",
+			"Shoes",
+			"Pants",
+			"Arm"
+		];
+
+		uint256 start = ((tokenData.generation & 128) != 0) ? TYPE_OFFSET : 0;
+		uint256 end = (start == 0) ? TYPE_OFFSET : MAX_TRAITS;
+		uint256 nTraits = end - start;
+		bytes memory attributes;
+		for (uint256 i; i < nTraits; i++) {
+			attributes = abi.encodePacked(
+				attributes,
+				'{"trait_type":"',
+				TRAIT_NAMES[start + i],
+				'","value":"',
+				traits[start + i][tokenData.trait[i]].name,
+				'"},'
+			);
+		}
+		return abi.encodePacked(
+			'[', attributes,
+			'{"trait_type":"Generation", "value":"', uint256(tokenData.generation & 127).toString(), '"},',
+			'{"trait_type":"Type","value":"', ((tokenData.generation & 128) != 0) ? TYPE1_NAME : TYPE0_NAME, '"}]'
+		);
 	}
 
 	// -- OWNER --
