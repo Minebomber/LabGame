@@ -38,14 +38,14 @@ contract Metadata is IMetadata, Ownable {
 	 * @return token metadata as a base64 json uri
 	 */
 	function tokenURI(uint256 tokenId) external view override returns (string memory) {
-		ILabGame.TokenData memory tokenData = labGame.getTokenData(tokenId);
+		ILabGame.Token memory token = labGame.getToken(tokenId);
 		return string(abi.encodePacked(
 			'data:application/json;base64,',
 			abi.encodePacked(
-				'{"name":"', ((tokenData.generation & 128) != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', tokenId.toString(),
+				'{"name":"', ((token.data & 64) != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', tokenId.toString(),
 				'","description":"', DESCRIPTION,
-				'","image":"data:image/svg+xml;base64,', bytes(tokenImage(tokenData)).encode(),
-				'","attributes":', tokenAttributes(tokenData),
+				'","image":"data:image/svg+xml;base64,', bytes(tokenImage(token)).encode(),
+				'","attributes":', tokenAttributes(token),
 				'}'
 			).encode()
 		));
@@ -55,19 +55,18 @@ contract Metadata is IMetadata, Ownable {
 
 	/**
 	 * Create SVG from token data
-	 * @param tokenData token data
+	 * @param token token data
 	 * @return SVG image string for the token
 	 */
-	function tokenImage(ILabGame.TokenData memory tokenData) internal view returns (bytes memory) {
-		uint256 start = ((tokenData.generation & 128) != 0) ? TYPE_OFFSET : 0;
-		uint256 end = (start == 0) ? TYPE_OFFSET : MAX_TRAITS;
-		uint256 nTraits = end - start;
+	function tokenImage(ILabGame.Token memory token) internal view returns (bytes memory) {
+		(uint256 start, uint256 end) = ((token.data & 64) != 0) ? (TYPE_OFFSET, MAX_TRAITS) : (0, TYPE_OFFSET);
+		uint256 count = end - start;
 		bytes memory images;
-		for (uint256 i; i < nTraits; i++) {
+		for (uint256 i; i < count; i++) {
 			images = abi.encodePacked(
 				images,
 				'<image x="0" y="0" width="', IMAGE_WIDTH, '" height="', IMAGE_HEIGHT, '" image-rendering="pixelated" preserveAspectRatio="xMidYMid" href="data:image/png;base64,',
-				traits[start + i][tokenData.trait[i]].image,
+				traits[start + i][token.trait[i]].image,
 				'"/>'
 			);
 		}
@@ -80,10 +79,10 @@ contract Metadata is IMetadata, Ownable {
 
 	/**
 	 * Create attributes dictionary for token
-	 * @param tokenData token data
+	 * @param token token data
 	 * @return JSON string of token attributes
 	 */
-	function tokenAttributes(ILabGame.TokenData memory tokenData) internal view returns (bytes memory) {
+	function tokenAttributes(ILabGame.Token memory token) internal view returns (bytes memory) {
 		string[MAX_TRAITS] memory TRAIT_NAMES = [
 			"Background",
 			"Scientist Type",
@@ -104,7 +103,7 @@ contract Metadata is IMetadata, Ownable {
 			"Arm"
 		];
 
-		uint256 start = ((tokenData.generation & 128) != 0) ? TYPE_OFFSET : 0;
+		uint256 start = ((token.data & 64) != 0) ? TYPE_OFFSET : 0;
 		uint256 end = (start == 0) ? TYPE_OFFSET : MAX_TRAITS;
 		uint256 nTraits = end - start;
 		bytes memory attributes;
@@ -114,14 +113,14 @@ contract Metadata is IMetadata, Ownable {
 				'{"trait_type":"',
 				TRAIT_NAMES[start + i],
 				'","value":"',
-				traits[start + i][tokenData.trait[i]].name,
+				traits[start + i][token.trait[i]].name,
 				'"},'
 			);
 		}
 		return abi.encodePacked(
 			'[', attributes,
-			'{"trait_type":"Generation", "value":"', uint256(tokenData.generation & 127).toString(), '"},',
-			'{"trait_type":"Type","value":"', ((tokenData.generation & 128) != 0) ? TYPE1_NAME : TYPE0_NAME, '"}]'
+			'{"trait_type":"Generation", "value":"', uint256(token.data & 3).toString(), '"},',
+			'{"trait_type":"Type","value":"', ((token.data & 64) != 0) ? TYPE1_NAME : TYPE0_NAME, '"}]'
 		);
 	}
 
@@ -130,12 +129,12 @@ contract Metadata is IMetadata, Ownable {
 	/**
 	 * Set trait data for trait
 	 * @param trait index of trait
-	 * @param data data for trait
+	 * @param traits_ trait data
 	 */
-	function setTraits(uint256 trait, Trait[] calldata data) external onlyOwner {
+	function setTraits(uint256 trait, Trait[] calldata traits_) external onlyOwner {
 		require(trait < MAX_TRAITS, "invalid trait");
-		for (uint256 i; i < data.length; i++)
-			traits[trait][i] = data[i];
+		for (uint256 i; i < traits_.length; i++)
+			traits[trait][i] = traits_[i];
 	}
 
 	/**

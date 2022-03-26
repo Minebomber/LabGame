@@ -30,15 +30,15 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	bool whitelisted = true;
 	mapping(address => bool) whitelist;
 
-	mapping(uint256 => TokenData) tokens;
+	mapping(uint256 => Token) tokens;
 	mapping(uint256 => uint256) hashes;
 
-	struct TokenRequest {
-		address minter;
+	struct MintRequest {
+		address sender;
 		uint256 tokenId;
 		uint256 amount;
 	}
-	mapping(uint256 => TokenRequest) pendingRequests;
+	mapping(uint256 => MintRequest) pendingRequests;
 	uint256 totalPending;
 
 	ISerum serum;
@@ -112,7 +112,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 			vrfGasLimit,
 			uint32(amount)
 		);
-		pendingRequests[requestId] = TokenRequest(_msgSender(), tokenId, amount);
+		pendingRequests[requestId] = MintRequest(_msgSender(), tokenId, amount);
 		emit GenerateRequest(_msgSender(), tokenId, amount);
 		totalPending += amount;
 	}
@@ -122,8 +122,8 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		return metadata.tokenURI(tokenId);
 	}
 
-	function getTokenData(uint256 tokenId) external view override returns (TokenData memory) {
-		require(_exists(tokenId), "Data query for nonexistent token");
+	function getToken(uint256 tokenId) external view override returns (Token memory) {
+		require(_exists(tokenId), "Token query for nonexistent token");
 		return tokens[tokenId];
 	}
 
@@ -140,11 +140,11 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	// -- INTERNAL --
 
 	function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
-		TokenRequest memory req = pendingRequests[requestId];
+		MintRequest memory req = pendingRequests[requestId];
 		for (uint256 i; i < req.amount; i++) {
 			generateToken(req.tokenId + i, randomWords[i]);
-			_safeMint(req.minter, req.tokenId + i);
-			emit GenerateFulfilled(req.tokenId, req.minter);
+			_safeMint(req.sender, req.tokenId + i);
+			emit GenerateFulfilled(req.tokenId, req.sender);
 		}
 		delete pendingRequests[requestId];
 	}
@@ -153,18 +153,10 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		//TODO: tokens[tokenId], hashes[dataHash] == 0
 	}
 
-	function hashToken(TokenData memory token) internal pure returns (uint256) {
+	function hashToken(Token memory token) internal pure returns (uint256) {
 		return uint256(keccak256(abi.encodePacked(
-			token.generation,
-			token.trait[0],
-			token.trait[1],
-			token.trait[2],
-			token.trait[3],
-			token.trait[4],
-			token.trait[5],
-			token.trait[6],
-			token.trait[7],
-			token.trait[8]
+			token.data,
+			token.trait
 		)));
 	}
 

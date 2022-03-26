@@ -2,10 +2,10 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 interface ILabGame {
-	struct TokenData {
-		uint8 generation;
+	struct Token {
+		uint8 data; // data & 3 == generation, data & 64 == isMutant, data & 128 == isGenerated
 		uint8[9] trait;
 	}
 
-	function getTokenData(uint256 tokenId) external view returns (TokenData memory);
+	function getToken(uint256 tokenId) external view returns (Token memory);
 }
