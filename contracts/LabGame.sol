@@ -64,8 +64,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	bytes32 vrfKeyHash;
 	uint32 vrfGasLimit;
 
-	event MintRequested(address minter, uint256 tokenId, uint256 amount);
-	event MintPending(uint256 tokenId, address receiver);
+	event TokensRequested(address minter, uint256 tokenId, uint256 amount);
+	event TokenPending(uint256 tokenId, address receiver);
+	event TokenRevealed(uint256 tokenId);
 
 	constructor(
 		string memory _name,
@@ -132,7 +133,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		);
 		mintRequests[requestId] = MintRequest(_msgSender(), tokenId, _amount);
 		totalPending += _amount;
-		emit MintRequested(_msgSender(), tokenId, _amount);
+		emit TokensRequested(_msgSender(), tokenId, _amount);
 	}
 
 	function reveal(uint256[] calldata _tokenIds) external whenNotPaused {
@@ -142,6 +143,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 			_generate(_tokenIds[i], pending.random);
 			_safeMint(pending.receiver, _tokenIds[i]);
 			delete pendingMints[_tokenIds[i]];
+			emit TokenRevealed(_tokenIds[i]);
 		}
 		totalPending -= _tokenIds.length;
 	}
@@ -176,7 +178,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 				request.sender,
 				_randomWords[i]
 			);
-			emit MintPending(request.tokenId + i, request.sender);
+			emit TokenPending(request.tokenId + i, request.sender);
 		}
 		delete mintRequests[_requestId];
 	}
