@@ -36,8 +36,6 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	mapping(uint256 => Token) tokens;
 	mapping(uint256 => uint256) hashes;
 
-	// mint (start, count) -> request (count) -> process each
-
 	struct MintRequest {
 		address sender;
 		uint256 tokenId;
@@ -46,7 +44,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	mapping(uint256 => MintRequest) mintRequests;
 
 	struct PendingMint {
-		address sender;
+		address receiver;
 		uint256 random;
 	}
 	mapping(uint256 => PendingMint) pendingMints;
@@ -137,12 +135,15 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		emit MintRequested(_msgSender(), tokenId, _amount);
 	}
 
-	function reveal(uint256 _tokenId) external whenNotPaused {
-		PendingMint memory pending = pendingMints[_tokenId];
-		_generate(_tokenId, pending.random);
-		delete pendingMints[_tokenId];
-		totalPending -= 1;
-		_safeMint(pending.sender, _tokenId);
+	function reveal(uint256[] calldata _tokenIds) external whenNotPaused {
+		for (uint256 i; i < _tokenIds.length; i++) {
+			PendingMint memory pending = pendingMints[_tokenIds[i]];
+			require(_msgSender() == pending.receiver, "Token not owned");
+			_generate(_tokenIds[i], pending.random);
+			_safeMint(pending.receiver, _tokenIds[i]);
+			delete pendingMints[_tokenIds[i]];
+		}
+		totalPending -= _tokenIds.length;
 	}
 
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
@@ -170,6 +171,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
 		MintRequest memory request = mintRequests[_requestId];
 		for (uint256 i; i < request.amount; i++) {
+			// TODO: Token stealing, change pending.receiver
 			pendingMints[request.tokenId + i] = PendingMint(
 				request.sender,
 				_randomWords[i]
@@ -230,19 +232,22 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 
 	function setVRFSubscription(uint64 _vrfSubscriptionId) external onlyOwner {
 		vrfSubscriptionId = _vrfSubscriptionId;
-		//vrfCoordinator.cancelSubscription(vrfSubscriptionId, msg.sender);
 	}
 
 	function setVRFGasLimit(uint32 _vrfGasLimit) external onlyOwner {
 		vrfGasLimit = _vrfGasLimit;
 	}
 
-	function addWhitelisted(address _account) external onlyOwner {
+	function whitelistAdd(address _account) external onlyOwner {
 		whitelist[_account] = true;
 	}
 
-	function removeWhitelisted(address _account) external onlyOwner {
+	function whitelistRemove(address _account) external onlyOwner {
 		whitelist[_account] = false;
+	}
+
+	function setWhitelisted(bool _whitelisted) external onlyOwner {
+		whitelisted = _whitelisted;
 	}
 
 	function setSerum(address _serum) external onlyOwner {
