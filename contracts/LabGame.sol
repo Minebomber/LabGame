@@ -27,6 +27,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 
 	uint256 constant MINT_LIMIT = 10;
 
+	uint256 constant MAX_TRAITS = 17;
+	uint256 constant TYPE_OFFSET = 9;
+
 	bool whitelisted = true;
 	mapping(address => bool) whitelist;
 
@@ -44,6 +47,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	ISerum serum;
 	IMetadata metadata;
 	IStaking staking;
+
+	uint8[][MAX_TRAITS] rarities;
+	uint8[][MAX_TRAITS] aliases;
 
 	VRFCoordinatorV2Interface vrfCoordinator;
 	uint64 vrfSubscriptionId;
@@ -77,6 +83,11 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		if (vrfCoordinator_ != address(0)) {
 			vrfCoordinator.addConsumer(vrfSubscriptionId, address(this));
 		}
+
+		for (uint256 i; i < MAX_TRAITS; i++) {
+			rarities[i] = [ 255, 170, 85, 85 ];
+			aliases[i] = [0, 0, 0, 1];
+		}
 	}
 
 	modifier verifyMint(uint256 amount) {
@@ -108,7 +119,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		uint256 requestId = vrfCoordinator.requestRandomWords(
 			vrfKeyHash,
 			vrfSubscriptionId,
-			3,				// Confirmations
+			3, // Confirmations
 			vrfGasLimit,
 			uint32(amount)
 		);
@@ -142,18 +153,47 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
 		MintRequest memory req = pendingRequests[requestId];
 		for (uint256 i; i < req.amount; i++) {
-			generateToken(req.tokenId + i, randomWords[i]);
+			_generate(req.tokenId + i, randomWords[i]);
 			_safeMint(req.sender, req.tokenId + i);
 			emit GenerateFulfilled(req.tokenId, req.sender);
 		}
+		totalPending -= req.amount;
 		delete pendingRequests[requestId];
 	}
 	
-	function generateToken(uint256 tokenId, uint256 random) internal {
-		//TODO: tokens[tokenId], hashes[dataHash] == 0
+	function _generate(uint256 tokenId, uint256 seed) internal {
+		uint256[4] memory GEN_MAX = [ GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX ];
+		uint256 generation;
+		for (; generation < 4 && tokenId <= GEN_MAX[generation]; generation++) {}
+		Token memory token;
+		uint256 hash;
+		do {
+ 			token = _select(seed, generation);
+			hash = _hash(token);
+		} while (hashes[hash] != 0);
+		tokens[tokenId] = token;
+		hashes[hash] = tokenId;
 	}
 
-	function hashToken(Token memory token) internal pure returns (uint256) {
+	function _select(uint256 seed, uint256 generation) internal view returns (Token memory token) {
+		token.data = 128 | uint8(generation);
+		bool mutant = ((seed & 0xFFFF) % 10) == 0; 
+		token.data |= mutant ? 64 : 0;
+		(uint256 start, uint256 count) = mutant ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
+		for (uint256 i; i < count; i++) {
+			seed >>= 16;
+			token.trait[i] = _trait(seed & 0xFFFF, start + i);
+		}
+	}
+
+	function _trait(uint256 seed, uint256 trait) internal view returns (uint8) {
+		uint256 i = (seed & 0xFF) % rarities[trait].length;
+		return (((seed >> 8) & 0xFF) < rarities[trait][i]) ?
+			uint8(i) :
+			aliases[trait][i];
+	}
+
+	function _hash(Token memory token) internal pure returns (uint256) {
 		return uint256(keccak256(abi.encodePacked(
 			token.data,
 			token.trait

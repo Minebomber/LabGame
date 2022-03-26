@@ -44,8 +44,8 @@ contract Metadata is IMetadata, Ownable {
 			abi.encodePacked(
 				'{"name":"', ((token.data & 64) != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', tokenId.toString(),
 				'","description":"', DESCRIPTION,
-				'","image":"data:image/svg+xml;base64,', bytes(tokenImage(token)).encode(),
-				'","attributes":', tokenAttributes(token),
+				'","image":"data:image/svg+xml;base64,', _image(token).encode(),
+				'","attributes":', _attributes(token),
 				'}'
 			).encode()
 		));
@@ -58,9 +58,8 @@ contract Metadata is IMetadata, Ownable {
 	 * @param token token data
 	 * @return SVG image string for the token
 	 */
-	function tokenImage(ILabGame.Token memory token) internal view returns (bytes memory) {
-		(uint256 start, uint256 end) = ((token.data & 64) != 0) ? (TYPE_OFFSET, MAX_TRAITS) : (0, TYPE_OFFSET);
-		uint256 count = end - start;
+	function _image(ILabGame.Token memory token) internal view returns (bytes memory) {
+		(uint256 start, uint256 count) = ((token.data & 64) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		bytes memory images;
 		for (uint256 i; i < count; i++) {
 			images = abi.encodePacked(
@@ -82,7 +81,7 @@ contract Metadata is IMetadata, Ownable {
 	 * @param token token data
 	 * @return JSON string of token attributes
 	 */
-	function tokenAttributes(ILabGame.Token memory token) internal view returns (bytes memory) {
+	function _attributes(ILabGame.Token memory token) internal view returns (bytes memory) {
 		string[MAX_TRAITS] memory TRAIT_NAMES = [
 			"Background",
 			"Scientist Type",
@@ -103,11 +102,9 @@ contract Metadata is IMetadata, Ownable {
 			"Arm"
 		];
 
-		uint256 start = ((token.data & 64) != 0) ? TYPE_OFFSET : 0;
-		uint256 end = (start == 0) ? TYPE_OFFSET : MAX_TRAITS;
-		uint256 nTraits = end - start;
+		(uint256 start, uint256 count) = ((token.data & 64) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		bytes memory attributes;
-		for (uint256 i; i < nTraits; i++) {
+		for (uint256 i; i < count; i++) {
 			attributes = abi.encodePacked(
 				attributes,
 				'{"trait_type":"',
@@ -132,7 +129,7 @@ contract Metadata is IMetadata, Ownable {
 	 * @param traits_ trait data
 	 */
 	function setTraits(uint256 trait, Trait[] calldata traits_) external onlyOwner {
-		require(trait < MAX_TRAITS, "invalid trait");
+		require(trait < MAX_TRAITS, "Invalid trait");
 		for (uint256 i; i < traits_.length; i++)
 			traits[trait][i] = traits_[i];
 	}
@@ -142,7 +139,7 @@ contract Metadata is IMetadata, Ownable {
 	 * @param addr new address
 	 */
 	function setLabGame(address addr) external onlyOwner {
-		require(addr != address(0), "address cannot be 0");
+		require(addr != address(0), "Address cannot be 0");
 		labGame = ILabGame(addr);
 	}
 }
