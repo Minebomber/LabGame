@@ -34,15 +34,15 @@ contract Metadata is IMetadata, Ownable {
 
 	/**
 	 * Get the metadata uri for a token
-	 * @param _id token id
+	 * @param _tokenId token id
 	 * @return token metadata as a base64 json uri
 	 */
-	function tokenURI(uint256 _id) external view override returns (string memory) {
-		ILabGame.Token memory token = labGame.getToken(_id);
+	function tokenURI(uint256 _tokenId) external view override returns (string memory) {
+		ILabGame.Token memory token = labGame.getToken(_tokenId);
 		return string(abi.encodePacked(
 			'data:application/json;base64,',
 			abi.encodePacked(
-				'{"name":"', ((token.data & 64) != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', _id.toString(),
+				'{"name":"', ((token.data & 64) != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', _tokenId.toString(),
 				'","description":"', DESCRIPTION,
 				'","image":"data:image/svg+xml;base64,', _image(token).encode(),
 				'","attributes":', _attributes(token),

@@ -36,12 +36,21 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	mapping(uint256 => Token) tokens;
 	mapping(uint256 => uint256) hashes;
 
+	// mint (start, count) -> request (count) -> process each
+
 	struct MintRequest {
 		address sender;
 		uint256 tokenId;
 		uint256 amount;
 	}
-	mapping(uint256 => MintRequest) pendingRequests;
+	mapping(uint256 => MintRequest) mintRequests;
+
+	struct PendingMint {
+		address sender;
+		uint256 random;
+	}
+	mapping(uint256 => PendingMint) pendingMints;
+
 	uint256 totalPending;
 
 	ISerum serum;
@@ -57,8 +66,8 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	bytes32 vrfKeyHash;
 	uint32 vrfGasLimit;
 
-	event GenerateRequest(address minter, uint256 tokenId, uint256 amount);
-	event GenerateFulfilled(uint256 tokenId, address receiver);
+	event MintRequested(address minter, uint256 tokenId, uint256 amount);
+	event MintPending(uint256 tokenId, address receiver);
 
 	constructor(
 		string memory _name,
@@ -123,25 +132,33 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 			vrfGasLimit,
 			uint32(_amount)
 		);
-		pendingRequests[requestId] = MintRequest(_msgSender(), tokenId, _amount);
-		emit GenerateRequest(_msgSender(), tokenId, _amount);
+		mintRequests[requestId] = MintRequest(_msgSender(), tokenId, _amount);
 		totalPending += _amount;
+		emit MintRequested(_msgSender(), tokenId, _amount);
 	}
 
-	function tokenURI(uint256 _id) public view override returns (string memory) {
-		require(_exists(_id), "URI query for nonexistent token");
-		return metadata.tokenURI(_id);
+	function reveal(uint256 _tokenId) external whenNotPaused {
+		PendingMint memory pending = pendingMints[_tokenId];
+		_generate(_tokenId, pending.random);
+		delete pendingMints[_tokenId];
+		totalPending -= 1;
+		_safeMint(pending.sender, _tokenId);
 	}
 
-	function getToken(uint256 _id) external view override returns (Token memory) {
-		require(_exists(_id), "Token query for nonexistent token");
-		return tokens[_id];
+	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
+		require(_exists(_tokenId), "URI query for nonexistent token");
+		return metadata.tokenURI(_tokenId);
 	}
 
-	function transferFrom(address _from, address _to, uint256 _id) public override (ERC721, IERC721) {
+	function getToken(uint256 _tokenId) external view override returns (Token memory) {
+		require(_exists(_tokenId), "Token query for nonexistent token");
+		return tokens[_tokenId];
+	}
+
+	function transferFrom(address _from, address _to, uint256 _tokenId) public override (ERC721, IERC721) {
 		if (_msgSender() != address(staking))
-			require(_isApprovedOrOwner(_msgSender(), _id), "transfer caller not approved");
-		_transfer(_from, _to, _id);
+			require(_isApprovedOrOwner(_msgSender(), _tokenId), "transfer caller not approved");
+		_transfer(_from, _to, _tokenId);
 	}
 
 	function isWhitelisted(address _account) public view returns (bool) {
@@ -151,29 +168,29 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	// -- INTERNAL --
 
 	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
-		MintRequest memory req = pendingRequests[_requestId];
-		for (uint256 i; i < req.amount; i++) {
-			// TODO: Move into user driven action
-			_generate(req.tokenId + i, _randomWords[i]);
-			_safeMint(req.sender, req.tokenId + i);
-			emit GenerateFulfilled(req.tokenId, req.sender);
+		MintRequest memory request = mintRequests[_requestId];
+		for (uint256 i; i < request.amount; i++) {
+			pendingMints[request.tokenId + i] = PendingMint(
+				request.sender,
+				_randomWords[i]
+			);
+			emit MintPending(request.tokenId + i, request.sender);
 		}
-		totalPending -= req.amount;
-		delete pendingRequests[_requestId];
+		delete mintRequests[_requestId];
 	}
 	
-	function _generate(uint256 _id, uint256 _seed) internal {
+	function _generate(uint256 _tokenId, uint256 _seed) internal {
 		uint256[4] memory GEN_MAX = [ GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX ];
 		uint256 generation;
-		for (; generation < 4 && _id <= GEN_MAX[generation]; generation++) {}
+		for (; generation < 4 && _tokenId <= GEN_MAX[generation]; generation++) {}
 		Token memory token;
 		uint256 hashed;
 		do {
  			token = _selectTraits(_seed, generation);
 			hashed = _hashToken(token);
 		} while (hashes[hashed] != 0);
-		tokens[_id] = token;
-		hashes[hashed] = _id;
+		tokens[_tokenId] = token;
+		hashes[hashed] = _tokenId;
 	}
 
 	function _selectTraits(uint256 _seed, uint256 _generation) internal view returns (Token memory token) {
