@@ -36,8 +36,10 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	struct TokenRequest {
 		address minter;
 		uint256 tokenId;
+		uint256 amount;
 	}
 	mapping(uint256 => TokenRequest) pendingRequests;
+	uint256 totalPending;
 
 	ISerum serum;
 	IMetadata metadata;
@@ -48,27 +50,31 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	LinkTokenInterface linkToken;
 	bytes32 vrfKeyHash;
 
-	event GenerateRequest(address minter, uint256 tokenId);
-	event GenerateFulfilled(uint256 tokenId);
+	event GenerateRequest(address minter, uint256 tokenId, uint256 amount);
+	event GenerateFulfilled(uint256 tokenId, address receiver);
 
 	constructor(
 		string memory name,
 		string memory symbol,
-		address serumAddress,
-		address metadataAddress,
-		address vrfCoordinatorAddress,
-		address linkAddress,
-		bytes32 keyHash
-	) ERC721(name, symbol) VRFConsumerBaseV2(vrfCoordinatorAddress) {
+		address serum_,
+		address metadata_,
+		address vrfCoordinator_,
+		address linkToken_,
+		bytes32 vrfKeyHash_,
+		uint64 vrfSubscriptionId_
+	) ERC721(name, symbol) VRFConsumerBaseV2(vrfCoordinator_) {
 
-		serum = ISerum(serumAddress);
-		metadata = IMetadata(metadataAddress);
+		serum = ISerum(serum_);
+		metadata = IMetadata(metadata_);
 
-		vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorAddress);
-		vrfSubscriptionId = vrfCoordinator.createSubscription();
-		vrfCoordinator.addConsumer(vrfSubscriptionId, address(this));
-		linkToken = LinkTokenInterface(linkAddress);
-		vrfKeyHash = keyHash;
+		vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinator_);
+		linkToken = LinkTokenInterface(linkToken_);
+		vrfKeyHash = vrfKeyHash_;
+		vrfSubscriptionId = vrfSubscriptionId_;
+		if (vrfCoordinator_ != address(0)) {
+			// vrfCoordinator.createSubscription();
+			vrfCoordinator.addConsumer(vrfSubscriptionId, address(this));
+		}
 	}
 
 	modifier verifyMint(uint256 amount, bool stake) {
@@ -97,26 +103,26 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	// -- EXTERNAL --
 
 	function mint(uint256 amount, bool stake) external payable whenNotPaused verifyMint(amount, stake) {
-		uint tokenId = totalSupply();
-		for (uint256 i; i < amount; i++) {
-			tokenId++;
-			uint256 requestId = vrfCoordinator.requestRandomWords(
-				vrfKeyHash,
-				vrfSubscriptionId,
-				3,				// Confirmations
-				100000,		// Gas limit
-				1					// n words
-			);
-			pendingRequests[requestId] = TokenRequest(_msgSender(), tokenId);
-			emit GenerateRequest(_msgSender(), tokenId);
-		}
+		uint tokenId = totalSupply() + totalPending;
+		uint256 requestId = vrfCoordinator.requestRandomWords(
+			vrfKeyHash,
+			vrfSubscriptionId,
+			3,				// Confirmations
+			100000,		// Gas limit
+			uint32(amount)
+		);
+		pendingRequests[requestId] = TokenRequest(_msgSender(), tokenId, amount);
+		emit GenerateRequest(_msgSender(), tokenId, amount);
+		totalPending += amount;
 	}
-
+	
 	function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
 		TokenRequest memory req = pendingRequests[requestId];
-		generateToken(req.tokenId, randomWords[0]);
-		_safeMint(req.minter, req.tokenId);
-		emit GenerateFulfilled(req.tokenId);
+		for (uint256 i; i < req.amount; i++) {
+			generateToken(req.tokenId + i, randomWords[i]);
+			_safeMint(req.minter, req.tokenId + i);
+			emit GenerateFulfilled(req.tokenId, req.minter);
+		}
 		delete pendingRequests[requestId];
 	}
 
@@ -134,15 +140,6 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		return tokens[tokenId];
 	}
 
-	function walletOf(address owner) external view returns (uint256[] memory) {
-		uint256 balance = balanceOf(owner);
-		uint256[] memory wallet = new uint256[](balance);
-		for (uint256 i; i < balance; i++) {
-			wallet[i] = tokenOfOwnerByIndex(owner, i);
-		}
-		return wallet;
-	}
-
 	function transferFrom(address from, address to, uint256 tokenId) public override (ERC721, IERC721) {
 		if (_msgSender() != address(staking))
 			require(_isApprovedOrOwner(_msgSender(), tokenId), "transfer caller not approved");
@@ -155,18 +152,18 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 
 	// -- INTERNAL --
 
-	function hashToken(TokenData memory tokenData) internal pure returns (uint256) {
+	function hashToken(TokenData memory token) internal pure returns (uint256) {
 		return uint256(keccak256(abi.encodePacked(
-			tokenData.generation,
-			tokenData.trait0,
-			tokenData.trait1,
-			tokenData.trait2,
-			tokenData.trait3,
-			tokenData.trait4,
-			tokenData.trait5,
-			tokenData.trait6,
-			tokenData.trait7,
-			tokenData.trait8
+			token.generation,
+			token.trait[0],
+			token.trait[1],
+			token.trait[2],
+			token.trait[3],
+			token.trait[4],
+			token.trait[5],
+			token.trait[6],
+			token.trait[7],
+			token.trait[8]
 		)));
 	}
 
@@ -180,8 +177,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		);
 	}
 
-	function cancelVRFSubscription() external onlyOwner {
-		vrfCoordinator.cancelSubscription(vrfSubscriptionId, msg.sender);
+	function setVRFSubscription(uint64 vrfSubscriptionId_) external onlyOwner {
+		vrfSubscriptionId = vrfSubscriptionId_;
+		//vrfCoordinator.cancelSubscription(vrfSubscriptionId, msg.sender);
 	}
 
 	function addWhitelisted(address addr) external onlyOwner {

@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/utils/Base64.sol";
 import "./interfaces/IMetadata.sol";
 import "./interfaces/ILabGame.sol";
 
-
 contract Metadata is IMetadata, Ownable {
 	using Strings for uint256;
 	using Base64 for bytes;

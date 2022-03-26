@@ -8,10 +8,18 @@ async function deployContract(name, ...args) {
 }
 
 async function main () {
+	const VRF_COORDINATOR = '0x514910771af9ca656af840dff83e8264ecf986ca';
+	const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
+	const KEYHASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
+
+	const TestVRFCoordinator = await deployContract('TestVRFCoordinatorV2');
+
 	const Serum = await deployContract('Serum', 'Serum', 'SERUM');
 	const Metadata = await deployContract('Metadata');
-	const Game = await deployContract('LabGame', 'LabGame', 'LABGAME', Serum.address, Metadata.address);
+	const Game = await deployContract('LabGame', 'LabGame', 'LABGAME', Serum.address, Metadata.address, TestVRFCoordinator.address, LINK_TOKEN, KEYHASH, 0);
 	const Staking = await deployContract('Staking', Game.address, Serum.address);
+
+	await Metadata.setLabGame(Game.address);
 }
 
 main()

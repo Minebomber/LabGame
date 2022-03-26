@@ -8,7 +8,12 @@ describe('LabGame', function() {
 	});
 
 	beforeEach(async function() {
-		this.labGame = await this.LabGame.deploy('LabGame', 'LABGAME', '0x0000000000000000000000000000000000000000', '0x0000000000000000000000000000000000000000');
+		const ADDR0 = '0x0000000000000000000000000000000000000000';
+		const VRF_COORDINATOR = '0x514910771af9ca656af840dff83e8264ecf986ca';
+		const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
+		const KEYHASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
+
+		this.labGame = await this.LabGame.deploy('LabGame', 'LABGAME', ADDR0, ADDR0, VRF_COORDINATOR, LINK_TOKEN, KEYHASH);
 		await this.labGame.deployed();
 	});
 
