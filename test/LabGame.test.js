@@ -4,8 +4,8 @@ const { ethers } = require('hardhat');
 describe('LabGame', function() {
 	before(async function() {
 		this.VRF = await ethers.getContractFactory('TestVRFCoordinatorV2');
-		this.Serum = await ethers.getContractFactory('Serum');
-		this.Metadata = await ethers.getContractFactory('Metadata');
+		//this.Serum = await ethers.getContractFactory('Serum');
+		//this.Metadata = await ethers.getContractFactory('Metadata');
 		this.LabGame = await ethers.getContractFactory('LabGame');
 		[this.owner, this.other] = await ethers.getSigners();
 	});
@@ -85,6 +85,13 @@ describe('LabGame', function() {
 			this.labGame.connect(this.other).mint(1, { value: ethers.utils.parseEther('0.06') })
 		).to.emit(this.labGame, 'TokensRequested');
 	});
+	
+	it('whitelist disabled mint success', async function() {
+		await this.labGame.connect(this.owner).setWhitelisted(false);
+		await expect(
+			this.labGame.connect(this.other).mint(1, { value: ethers.utils.parseEther('0.06') })
+		).to.emit(this.labGame, 'TokensRequested');
+	});
 
 	it('no payment mint revert', async function() {
 		await this.labGame.connect(this.owner).setWhitelisted(false);
@@ -105,5 +112,26 @@ describe('LabGame', function() {
 		await expect(
 			this.labGame.mint(11)
 		).to.be.reverted;
+	});
+
+	it('non-receiver reveal revert', async function() {
+		await this.labGame.connect(this.owner).setWhitelisted(false);
+		await this.labGame.connect(this.owner).mint(1, { value: ethers.utils.parseEther('0.06') });
+		await this.vrf.fulfillRequests();
+		await expect(
+			this.labGame.connect(this.other).reveal([1])
+		).to.be.reverted;
+	});
+
+	it('receiver reveal success', async function() {
+		await this.labGame.connect(this.owner).setWhitelisted(false);
+		await this.labGame.connect(this.other).mint(1, { value: ethers.utils.parseEther('0.06') });
+		await this.vrf.fulfillRequests();
+		await expect(
+			this.labGame.connect(this.other).reveal([1])
+		).to.emit(this.labGame, 'TokenRevealed');
+		expect(
+			await this.labGame.tokenOfOwnerByIndex(this.other.address, 0)
+		).to.equal(1);
 	});
 });
