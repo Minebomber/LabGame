@@ -61,26 +61,26 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	event GenerateFulfilled(uint256 tokenId, address receiver);
 
 	constructor(
-		string memory name,
-		string memory symbol,
-		address serum_,
-		address metadata_,
-		address vrfCoordinator_,
-		address linkToken_,
-		bytes32 vrfKeyHash_,
-		uint64 vrfSubscriptionId_,
-		uint32 vrfGasLimit_ 
-	) ERC721(name, symbol) VRFConsumerBaseV2(vrfCoordinator_) {
+		string memory _name,
+		string memory _symbol,
+		address _serum,
+		address _metadata,
+		address _vrfCoordinator,
+		address _linkToken,
+		bytes32 _vrfKeyHash,
+		uint64 _vrfSubscriptionId,
+		uint32 _vrfGasLimit 
+	) ERC721(_name, _symbol) VRFConsumerBaseV2(_vrfCoordinator) {
 
-		serum = ISerum(serum_);
-		metadata = IMetadata(metadata_);
+		serum = ISerum(_serum);
+		metadata = IMetadata(_metadata);
 
-		vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinator_);
-		linkToken = LinkTokenInterface(linkToken_);
-		vrfKeyHash = vrfKeyHash_;
-		vrfSubscriptionId = vrfSubscriptionId_;
-		vrfGasLimit = vrfGasLimit_;
-		if (vrfCoordinator_ != address(0)) {
+		vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
+		linkToken = LinkTokenInterface(_linkToken);
+		vrfKeyHash = _vrfKeyHash;
+		vrfSubscriptionId = _vrfSubscriptionId;
+		vrfGasLimit = _vrfGasLimit;
+		if (_vrfCoordinator != address(0)) {
 			vrfCoordinator.addConsumer(vrfSubscriptionId, address(this));
 		}
 
@@ -90,22 +90,22 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		}
 	}
 
-	modifier verifyMint(uint256 amount) {
+	modifier verifyMint(uint256 _amount) {
 		require(tx.origin == _msgSender());
-		require(amount > 0 && amount <= MINT_LIMIT, "Invalid mint amount");
+		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
 		if (whitelisted) require(isWhitelisted(_msgSender()), "Not whitelisted");
 		
 		uint256[4] memory GEN_MAX = [ GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX ];
 		uint256[4] memory GEN_PRICE = [ GEN0_PRICE, GEN1_PRICE, GEN2_PRICE, GEN3_PRICE ];
 		
 		uint256 id = totalSupply() + totalPending;
-		uint256 max = id + amount;
+		uint256 max = id + _amount;
 		require(max <= GEN_MAX[3], "Sold out");
 		for (uint256 i; i < 4; i++) {
 			if (id < GEN_MAX[i]) {
 				require(max <= GEN_MAX[i], "Generation limit");
-				if (i == 0) require(msg.value >= amount * GEN_PRICE[i], "Not enough ether");
-				else serum.burn(_msgSender(), amount * GEN_PRICE[i]);
+				if (i == 0) require(msg.value >= _amount * GEN_PRICE[i], "Not enough ether");
+				else serum.burn(_msgSender(), _amount * GEN_PRICE[i]);
 				break;
 			}
 		}
@@ -114,133 +114,134 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 
 	// -- EXTERNAL --
 
-	function mint(uint256 amount) external payable whenNotPaused verifyMint(amount) {
+	function mint(uint256 _amount) external payable whenNotPaused verifyMint(_amount) {
 		uint tokenId = totalSupply() + totalPending + 1;
 		uint256 requestId = vrfCoordinator.requestRandomWords(
 			vrfKeyHash,
 			vrfSubscriptionId,
 			3, // Confirmations
 			vrfGasLimit,
-			uint32(amount)
+			uint32(_amount)
 		);
-		pendingRequests[requestId] = MintRequest(_msgSender(), tokenId, amount);
-		emit GenerateRequest(_msgSender(), tokenId, amount);
-		totalPending += amount;
+		pendingRequests[requestId] = MintRequest(_msgSender(), tokenId, _amount);
+		emit GenerateRequest(_msgSender(), tokenId, _amount);
+		totalPending += _amount;
 	}
 
-	function tokenURI(uint256 tokenId) public view override returns (string memory) {
-		require(_exists(tokenId), "URI query for nonexistent token");
-		return metadata.tokenURI(tokenId);
+	function tokenURI(uint256 _id) public view override returns (string memory) {
+		require(_exists(_id), "URI query for nonexistent token");
+		return metadata.tokenURI(_id);
 	}
 
-	function getToken(uint256 tokenId) external view override returns (Token memory) {
-		require(_exists(tokenId), "Token query for nonexistent token");
-		return tokens[tokenId];
+	function getToken(uint256 _id) external view override returns (Token memory) {
+		require(_exists(_id), "Token query for nonexistent token");
+		return tokens[_id];
 	}
 
-	function transferFrom(address from, address to, uint256 tokenId) public override (ERC721, IERC721) {
+	function transferFrom(address _from, address _to, uint256 _id) public override (ERC721, IERC721) {
 		if (_msgSender() != address(staking))
-			require(_isApprovedOrOwner(_msgSender(), tokenId), "transfer caller not approved");
-		_transfer(from, to, tokenId);
+			require(_isApprovedOrOwner(_msgSender(), _id), "transfer caller not approved");
+		_transfer(_from, _to, _id);
 	}
 
-	function isWhitelisted(address account) public view returns (bool) {
-		return whitelist[account];
+	function isWhitelisted(address _account) public view returns (bool) {
+		return whitelist[_account];
 	}
 
 	// -- INTERNAL --
 
-	function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
-		MintRequest memory req = pendingRequests[requestId];
+	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
+		MintRequest memory req = pendingRequests[_requestId];
 		for (uint256 i; i < req.amount; i++) {
-			_generate(req.tokenId + i, randomWords[i]);
+			// TODO: Move into user driven action
+			_generate(req.tokenId + i, _randomWords[i]);
 			_safeMint(req.sender, req.tokenId + i);
 			emit GenerateFulfilled(req.tokenId, req.sender);
 		}
 		totalPending -= req.amount;
-		delete pendingRequests[requestId];
+		delete pendingRequests[_requestId];
 	}
 	
-	function _generate(uint256 tokenId, uint256 seed) internal {
+	function _generate(uint256 _id, uint256 _seed) internal {
 		uint256[4] memory GEN_MAX = [ GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX ];
 		uint256 generation;
-		for (; generation < 4 && tokenId <= GEN_MAX[generation]; generation++) {}
+		for (; generation < 4 && _id <= GEN_MAX[generation]; generation++) {}
 		Token memory token;
-		uint256 hash;
+		uint256 hashed;
 		do {
- 			token = _select(seed, generation);
-			hash = _hash(token);
-		} while (hashes[hash] != 0);
-		tokens[tokenId] = token;
-		hashes[hash] = tokenId;
+ 			token = _selectTraits(_seed, generation);
+			hashed = _hashToken(token);
+		} while (hashes[hashed] != 0);
+		tokens[_id] = token;
+		hashes[hashed] = _id;
 	}
 
-	function _select(uint256 seed, uint256 generation) internal view returns (Token memory token) {
-		token.data = 128 | uint8(generation);
-		bool mutant = ((seed & 0xFFFF) % 10) == 0; 
+	function _selectTraits(uint256 _seed, uint256 _generation) internal view returns (Token memory token) {
+		token.data = 128 | uint8(_generation);
+		bool mutant = ((_seed & 0xFFFF) % 10) == 0; 
 		token.data |= mutant ? 64 : 0;
 		(uint256 start, uint256 count) = mutant ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		for (uint256 i; i < count; i++) {
-			seed >>= 16;
-			token.trait[i] = _trait(seed & 0xFFFF, start + i);
+			_seed >>= 16;
+			token.trait[i] = _selectTrait(_seed & 0xFFFF, start + i);
 		}
 	}
 
-	function _trait(uint256 seed, uint256 trait) internal view returns (uint8) {
-		uint256 i = (seed & 0xFF) % rarities[trait].length;
-		return (((seed >> 8) & 0xFF) < rarities[trait][i]) ?
+	function _selectTrait(uint256 _seed, uint256 _trait) internal view returns (uint8) {
+		uint256 i = (_seed & 0xFF) % rarities[_trait].length;
+		return (((_seed >> 8) & 0xFF) < rarities[_trait][i]) ?
 			uint8(i) :
-			aliases[trait][i];
+			aliases[_trait][i];
 	}
 
-	function _hash(Token memory token) internal pure returns (uint256) {
+	function _hashToken(Token memory _token) internal pure returns (uint256) {
 		return uint256(keccak256(abi.encodePacked(
-			token.data,
-			token.trait
+			_token.data,
+			_token.trait
 		)));
 	}
 
 	// -- OWNER --
 
-	function fundVRFSubscription(uint256 amount) external onlyOwner {
+	function fundVRFSubscription(uint256 _amount) external onlyOwner {
 		linkToken.transferAndCall(
 			address(vrfCoordinator),
-			amount,
+			_amount,
 			abi.encode(vrfSubscriptionId)
 		);
 	}
 
-	function setVRFSubscription(uint64 vrfSubscriptionId_) external onlyOwner {
-		vrfSubscriptionId = vrfSubscriptionId_;
+	function setVRFSubscription(uint64 _vrfSubscriptionId) external onlyOwner {
+		vrfSubscriptionId = _vrfSubscriptionId;
 		//vrfCoordinator.cancelSubscription(vrfSubscriptionId, msg.sender);
 	}
 
-	function setVRFGasLimit(uint32 vrfGasLimit_) external onlyOwner {
-		vrfGasLimit = vrfGasLimit_;
+	function setVRFGasLimit(uint32 _vrfGasLimit) external onlyOwner {
+		vrfGasLimit = _vrfGasLimit;
 	}
 
-	function addWhitelisted(address account) external onlyOwner {
-		whitelist[account] = true;
+	function addWhitelisted(address _account) external onlyOwner {
+		whitelist[_account] = true;
 	}
 
-	function removeWhitelisted(address account) external onlyOwner {
-		whitelist[account] = false;
+	function removeWhitelisted(address _account) external onlyOwner {
+		whitelist[_account] = false;
 	}
 
-	function setSerum(address serum_) external onlyOwner {
-		serum = ISerum(serum_);
+	function setSerum(address _serum) external onlyOwner {
+		serum = ISerum(_serum);
 	}
 
-	function setMetadata(address metadata_) external onlyOwner {
-		metadata = IMetadata(metadata_);
+	function setMetadata(address _metadata) external onlyOwner {
+		metadata = IMetadata(_metadata);
 	}
 
-	function setStaking(address staking_) external onlyOwner {
-		staking = IStaking(staking_);
+	function setStaking(address _staking) external onlyOwner {
+		staking = IStaking(_staking);
 	}
 
-	function setPaused(bool paused) external onlyOwner {
-		if (paused)	_pause();
+	function setPaused(bool _state) external onlyOwner {
+		if (_state)	_pause();
 		else        _unpause();
 	}
 

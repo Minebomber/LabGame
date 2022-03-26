@@ -7,5 +7,5 @@ interface ILabGame {
 		uint8[9] trait;
 	}
 
-	function getToken(uint256 tokenId) external view returns (Token memory);
+	function getToken(uint256 _id) external view returns (Token memory);
 }

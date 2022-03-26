@@ -11,10 +11,10 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 
 	/**
 	 * Token constructor, sets owner permission
-	 * @param name ERC20 token name
-	 * @param symbol ERC20 token symbol
+	 * @param _name ERC20 token name
+	 * @param _symbol ERC20 token symbol
 	 */
-	constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+	constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {
 		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 	}
 
@@ -22,46 +22,46 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 
 	/**
 	 * Mint tokens to an address
-	 * @param to address to mint to
-	 * @param amount number of tokens to mint
+	 * @param _to address to mint to
+	 * @param _amount number of tokens to mint
 	 */
-	function mint(address to, uint256 amount) external whenNotPaused onlyRole(CONTROLLER_ROLE) {
-		_mint(to, amount);
+	function mint(address _to, uint256 _amount) external whenNotPaused onlyRole(CONTROLLER_ROLE) {
+		_mint(_to, _amount);
 	}
 
 	/**
 	 * Burn tokens from an address
-	 * @param from address to burn from
-	 * @param amount number of tokens to burn
+	 * @param _from address to burn from
+	 * @param _amount number of tokens to burn
 	 */
-	function burn(address from, uint256 amount) external whenNotPaused onlyRole(CONTROLLER_ROLE) {
-		_burn(from, amount);
+	function burn(address _from, uint256 _amount) external whenNotPaused onlyRole(CONTROLLER_ROLE) {
+		_burn(_from, _amount);
 	}
 
 	// -- ADMIN --
 
 	/**
 	 * Add address as a controller
-	 * @param addr controller address
+	 * @param _controller controller address
 	 */
-	function addController(address addr) external onlyRole(DEFAULT_ADMIN_ROLE) {
-		grantRole(CONTROLLER_ROLE, addr);
+	function addController(address _controller) external onlyRole(DEFAULT_ADMIN_ROLE) {
+		grantRole(CONTROLLER_ROLE, _controller);
 	}
 
 	/**
 	 * Remove address as a controller
-	 * @param addr controller address
+	 * @param _controller controller address
 	 */
-	function removeController(address addr) external onlyRole(DEFAULT_ADMIN_ROLE) {
-		revokeRole(CONTROLLER_ROLE, addr);
+	function removeController(address _controller) external onlyRole(DEFAULT_ADMIN_ROLE) {
+		revokeRole(CONTROLLER_ROLE, _controller);
 	}
 
 	/**
 	 * Set paused state
-	 * @param paused pause state
+	 * @param _state pause state
 	 */
-	function setPaused(bool paused) external onlyRole(DEFAULT_ADMIN_ROLE) {
-		if (paused)	_pause();
+	function setPaused(bool _state) external onlyRole(DEFAULT_ADMIN_ROLE) {
+		if (_state)	_pause();
 		else        _unpause();
 	}
 }

@@ -34,15 +34,15 @@ contract Metadata is IMetadata, Ownable {
 
 	/**
 	 * Get the metadata uri for a token
-	 * @param tokenId token id
+	 * @param _id token id
 	 * @return token metadata as a base64 json uri
 	 */
-	function tokenURI(uint256 tokenId) external view override returns (string memory) {
-		ILabGame.Token memory token = labGame.getToken(tokenId);
+	function tokenURI(uint256 _id) external view override returns (string memory) {
+		ILabGame.Token memory token = labGame.getToken(_id);
 		return string(abi.encodePacked(
 			'data:application/json;base64,',
 			abi.encodePacked(
-				'{"name":"', ((token.data & 64) != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', tokenId.toString(),
+				'{"name":"', ((token.data & 64) != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', _id.toString(),
 				'","description":"', DESCRIPTION,
 				'","image":"data:image/svg+xml;base64,', _image(token).encode(),
 				'","attributes":', _attributes(token),
@@ -55,17 +55,17 @@ contract Metadata is IMetadata, Ownable {
 
 	/**
 	 * Create SVG from token data
-	 * @param token token data
+	 * @param _token token data
 	 * @return SVG image string for the token
 	 */
-	function _image(ILabGame.Token memory token) internal view returns (bytes memory) {
-		(uint256 start, uint256 count) = ((token.data & 64) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
+	function _image(ILabGame.Token memory _token) internal view returns (bytes memory) {
+		(uint256 start, uint256 count) = ((_token.data & 64) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		bytes memory images;
 		for (uint256 i; i < count; i++) {
 			images = abi.encodePacked(
 				images,
 				'<image x="0" y="0" width="', IMAGE_WIDTH, '" height="', IMAGE_HEIGHT, '" image-rendering="pixelated" preserveAspectRatio="xMidYMid" href="data:image/png;base64,',
-				traits[start + i][token.trait[i]].image,
+				traits[start + i][_token.trait[i]].image,
 				'"/>'
 			);
 		}
@@ -78,10 +78,10 @@ contract Metadata is IMetadata, Ownable {
 
 	/**
 	 * Create attributes dictionary for token
-	 * @param token token data
+	 * @param _token token data
 	 * @return JSON string of token attributes
 	 */
-	function _attributes(ILabGame.Token memory token) internal view returns (bytes memory) {
+	function _attributes(ILabGame.Token memory _token) internal view returns (bytes memory) {
 		string[MAX_TRAITS] memory TRAIT_NAMES = [
 			"Background",
 			"Scientist Type",
@@ -102,7 +102,7 @@ contract Metadata is IMetadata, Ownable {
 			"Arm"
 		];
 
-		(uint256 start, uint256 count) = ((token.data & 64) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
+		(uint256 start, uint256 count) = ((_token.data & 64) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		bytes memory attributes;
 		for (uint256 i; i < count; i++) {
 			attributes = abi.encodePacked(
@@ -110,14 +110,14 @@ contract Metadata is IMetadata, Ownable {
 				'{"trait_type":"',
 				TRAIT_NAMES[start + i],
 				'","value":"',
-				traits[start + i][token.trait[i]].name,
+				traits[start + i][_token.trait[i]].name,
 				'"},'
 			);
 		}
 		return abi.encodePacked(
 			'[', attributes,
-			'{"trait_type":"Generation", "value":"', uint256(token.data & 3).toString(), '"},',
-			'{"trait_type":"Type","value":"', ((token.data & 64) != 0) ? TYPE1_NAME : TYPE0_NAME, '"}]'
+			'{"trait_type":"Generation", "value":"', uint256(_token.data & 3).toString(), '"},',
+			'{"trait_type":"Type","value":"', ((_token.data & 64) != 0) ? TYPE1_NAME : TYPE0_NAME, '"}]'
 		);
 	}
 
@@ -125,21 +125,21 @@ contract Metadata is IMetadata, Ownable {
 	
 	/**
 	 * Set trait data for trait
-	 * @param trait index of trait
-	 * @param traits_ trait data
+	 * @param _trait index of trait
+	 * @param _traits trait data
 	 */
-	function setTraits(uint256 trait, Trait[] calldata traits_) external onlyOwner {
-		require(trait < MAX_TRAITS, "Invalid trait");
-		for (uint256 i; i < traits_.length; i++)
-			traits[trait][i] = traits_[i];
+	function setTraits(uint256 _trait, Trait[] calldata _traits) external onlyOwner {
+		require(_trait < MAX_TRAITS, "Invalid trait");
+		for (uint256 i; i < _traits.length; i++)
+			traits[_trait][i] = _traits[i];
 	}
 
 	/**
 	 * Set the address of the game contract
-	 * @param addr new address
+	 * @param _labGame new address
 	 */
-	function setLabGame(address addr) external onlyOwner {
-		require(addr != address(0), "Address cannot be 0");
-		labGame = ILabGame(addr);
+	function setLabGame(address _labGame) external onlyOwner {
+		require(_labGame != address(0), "Address cannot be 0");
+		labGame = ILabGame(_labGame);
 	}
 }

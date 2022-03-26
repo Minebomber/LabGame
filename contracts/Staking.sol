@@ -15,18 +15,18 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 	ILabGame labGame;
 	ISerum serum;
 
-	constructor(address labGame_, address serum_) {
-		labGame = ILabGame(labGame_);
-		serum = ISerum(serum_);
+	constructor(address _labGame, address _serum) {
+		labGame = ILabGame(_labGame);
+		serum = ISerum(_serum);
 	}
 
 	// -- EXTERNAL --
 
-	function add(address account, uint16[] calldata tokenIds) external whenNotPaused nonReentrant {
+	function stake(address _account, uint16[] calldata _ids) external whenNotPaused nonReentrant {
 
 	}
 
-	function claim(uint16[] memory tokenIds, bool unstake) external whenNotPaused nonReentrant {
+	function claim(uint16[] memory _ids, bool _unstake) external whenNotPaused nonReentrant {
 
 	}
 
@@ -37,16 +37,16 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 
 	// -- OWNER -- 
 
-	function setLabGame(address labGame_) external onlyOwner {
-		labGame = ILabGame(labGame_);
+	function setLabGame(address _labGame) external onlyOwner {
+		labGame = ILabGame(_labGame);
 	}
 
-	function setSerum(address serum_) external onlyOwner {
-		serum = ISerum(serum_);
+	function setSerum(address _serum) external onlyOwner {
+		serum = ISerum(_serum);
 	}
 
-	function setPaused(bool paused) external onlyOwner {
-		if (paused)	_pause();
+	function setPaused(bool _state) external onlyOwner {
+		if (_state)	_pause();
 		else        _unpause();
 	}
 }
