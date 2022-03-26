@@ -49,6 +49,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	uint64 vrfSubscriptionId;
 	LinkTokenInterface linkToken;
 	bytes32 vrfKeyHash;
+	uint32 vrfGasLimit;
 
 	event GenerateRequest(address minter, uint256 tokenId, uint256 amount);
 	event GenerateFulfilled(uint256 tokenId, address receiver);
@@ -61,7 +62,8 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		address vrfCoordinator_,
 		address linkToken_,
 		bytes32 vrfKeyHash_,
-		uint64 vrfSubscriptionId_
+		uint64 vrfSubscriptionId_,
+		uint32 vrfGasLimit_ 
 	) ERC721(name, symbol) VRFConsumerBaseV2(vrfCoordinator_) {
 
 		serum = ISerum(serum_);
@@ -71,22 +73,21 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		linkToken = LinkTokenInterface(linkToken_);
 		vrfKeyHash = vrfKeyHash_;
 		vrfSubscriptionId = vrfSubscriptionId_;
+		vrfGasLimit = vrfGasLimit_;
 		if (vrfCoordinator_ != address(0)) {
-			// vrfCoordinator.createSubscription();
 			vrfCoordinator.addConsumer(vrfSubscriptionId, address(this));
 		}
 	}
 
-	modifier verifyMint(uint256 amount, bool stake) {
-		require(tx.origin == _msgSender(), "Only EOA");
+	modifier verifyMint(uint256 amount) {
+		require(tx.origin == _msgSender());
 		require(amount > 0 && amount <= MINT_LIMIT, "Invalid mint amount");
 		if (whitelisted) require(isWhitelisted(_msgSender()), "Not whitelisted");
-		require(!stake || (address(staking) != address(0)), "Staking not available");
 		
 		uint256[4] memory GEN_MAX = [ GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX ];
 		uint256[4] memory GEN_PRICE = [ GEN0_PRICE, GEN1_PRICE, GEN2_PRICE, GEN3_PRICE ];
 		
-		uint256 id = totalSupply();
+		uint256 id = totalSupply() + totalPending;
 		uint256 max = id + amount;
 		require(max <= GEN_MAX[3], "Sold out");
 		for (uint256 i; i < 4; i++) {
@@ -102,32 +103,18 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 
 	// -- EXTERNAL --
 
-	function mint(uint256 amount, bool stake) external payable whenNotPaused verifyMint(amount, stake) {
-		uint tokenId = totalSupply() + totalPending;
+	function mint(uint256 amount) external payable whenNotPaused verifyMint(amount) {
+		uint tokenId = totalSupply() + totalPending + 1;
 		uint256 requestId = vrfCoordinator.requestRandomWords(
 			vrfKeyHash,
 			vrfSubscriptionId,
 			3,				// Confirmations
-			100000,		// Gas limit
+			vrfGasLimit,
 			uint32(amount)
 		);
 		pendingRequests[requestId] = TokenRequest(_msgSender(), tokenId, amount);
 		emit GenerateRequest(_msgSender(), tokenId, amount);
 		totalPending += amount;
-	}
-	
-	function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
-		TokenRequest memory req = pendingRequests[requestId];
-		for (uint256 i; i < req.amount; i++) {
-			generateToken(req.tokenId + i, randomWords[i]);
-			_safeMint(req.minter, req.tokenId + i);
-			emit GenerateFulfilled(req.tokenId, req.minter);
-		}
-		delete pendingRequests[requestId];
-	}
-
-	function generateToken(uint256 tokenId, uint256 random) internal {
-		//TODO: tokens[tokenId], hashes[dataHash] == 0
 	}
 
 	function tokenURI(uint256 tokenId) public view override returns (string memory) {
@@ -152,6 +139,20 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 
 	// -- INTERNAL --
 
+	function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
+		TokenRequest memory req = pendingRequests[requestId];
+		for (uint256 i; i < req.amount; i++) {
+			generateToken(req.tokenId + i, randomWords[i]);
+			_safeMint(req.minter, req.tokenId + i);
+			emit GenerateFulfilled(req.tokenId, req.minter);
+		}
+		delete pendingRequests[requestId];
+	}
+	
+	function generateToken(uint256 tokenId, uint256 random) internal {
+		//TODO: tokens[tokenId], hashes[dataHash] == 0
+	}
+
 	function hashToken(TokenData memory token) internal pure returns (uint256) {
 		return uint256(keccak256(abi.encodePacked(
 			token.generation,
@@ -169,7 +170,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 
 	// -- OWNER --
 
-	function fundSubscription(uint256 amount) external onlyOwner {
+	function fundVRFSubscription(uint256 amount) external onlyOwner {
 		linkToken.transferAndCall(
 			address(vrfCoordinator),
 			amount,
@@ -182,12 +183,16 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		//vrfCoordinator.cancelSubscription(vrfSubscriptionId, msg.sender);
 	}
 
-	function addWhitelisted(address addr) external onlyOwner {
-		whitelist[addr] = true;
+	function setVRFGasLimit(uint32 vrfGasLimit_) external onlyOwner {
+		vrfGasLimit = vrfGasLimit_;
 	}
 
-	function removeWhitelisted(address addr) external onlyOwner {
-		whitelist[addr] = false;
+	function addWhitelisted(address account) external onlyOwner {
+		whitelist[account] = true;
+	}
+
+	function removeWhitelisted(address account) external onlyOwner {
+		whitelist[account] = false;
 	}
 
 	function setSerum(address serum_) external onlyOwner {

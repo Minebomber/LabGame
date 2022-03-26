@@ -22,11 +22,11 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 
 	// -- EXTERNAL --
 
-	function add(uint256 tokenId) external {
+	function add(address account, uint16[] calldata tokenIds) external whenNotPaused nonReentrant {
 
 	}
 
-	function claim(uint16[] memory tokenIds, bool unstake) external {
+	function claim(uint16[] memory tokenIds, bool unstake) external whenNotPaused nonReentrant {
 
 	}
 

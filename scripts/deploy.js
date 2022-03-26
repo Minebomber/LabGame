@@ -16,7 +16,7 @@ async function main () {
 
 	const Serum = await deployContract('Serum', 'Serum', 'SERUM');
 	const Metadata = await deployContract('Metadata');
-	const Game = await deployContract('LabGame', 'LabGame', 'LABGAME', Serum.address, Metadata.address, TestVRFCoordinator.address, LINK_TOKEN, KEYHASH, 0);
+	const Game = await deployContract('LabGame', 'LabGame', 'LABGAME', Serum.address, Metadata.address, TestVRFCoordinator.address, LINK_TOKEN, KEYHASH, 0, 100_000);
 	const Staking = await deployContract('Staking', Game.address, Serum.address);
 
 	await Metadata.setLabGame(Game.address);
