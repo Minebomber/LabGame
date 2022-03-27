@@ -44,10 +44,10 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	mapping(uint256 => MintRequest) mintRequests;
 
 	struct PendingMint {
-		address receiver;
+		uint256 tokenId;
 		uint256 random;
 	}
-	mapping(uint256 => PendingMint) pendingMints;
+	mapping(address => PendingMint[]) pendingMints;
 
 	uint256 totalPending;
 
@@ -137,16 +137,17 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		emit TokensRequested(_msgSender(), tokenId, _amount);
 	}
 
-	function reveal(uint256[] calldata _tokenIds) external whenNotPaused {
-		for (uint256 i; i < _tokenIds.length; i++) {
-			PendingMint memory pending = pendingMints[_tokenIds[i]];
-			require(_msgSender() == pending.receiver, "Token not owned");
-			_generate(_tokenIds[i], pending.random);
-			_safeMint(pending.receiver, _tokenIds[i]);
-			delete pendingMints[_tokenIds[i]];
-			emit TokenRevealed(_tokenIds[i]);
+	function reveal() external whenNotPaused {
+		uint256 count = pendingMints[_msgSender()].length;
+		require(count > 0, "No pending mints");
+		for (uint256 i; i < pendingMints[_msgSender()].length; i++) {
+			PendingMint memory pending = pendingMints[_msgSender()][i];
+			_generate(pending.tokenId, pending.random);
+			_safeMint(_msgSender(), pending.tokenId);
+			emit TokenRevealed(pending.tokenId);
 		}
-		totalPending -= _tokenIds.length;
+		totalPending -= count;
+		delete pendingMints[_msgSender()];
 	}
 
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
@@ -178,11 +179,11 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
 		MintRequest memory request = mintRequests[_requestId];
 		for (uint256 i; i < request.amount; i++) {
-			// TODO: Token stealing, change pending.receiver
-			pendingMints[request.tokenId + i] = PendingMint(
-				request.sender,
+			// TODO: Token stealing, change pendingMints key
+			pendingMints[request.sender].push(PendingMint(
+				request.tokenId + i,
 				_randomWords[i]
-			);
+			));
 			emit TokenPending(request.tokenId + i, request.sender);
 		}
 		delete mintRequests[_requestId];
