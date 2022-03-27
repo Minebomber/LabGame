@@ -174,6 +174,15 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		return whitelist[_account];
 	}
 
+	function pendingCount(address _account) external view returns (uint256) {
+		return pendingMints[_account].length;
+	}
+
+	function pendingOfOwnerByIndex(address _account, uint256 _index) external view returns (uint256) {
+		require(_index < pendingMints[_account].length, "Invalid index");
+		return pendingMints[_account][_index].tokenId;
+	}
+
 	// -- INTERNAL --
 
 	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
