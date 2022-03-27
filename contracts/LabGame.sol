@@ -202,12 +202,13 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		uint256[4] memory GEN_MAX = [ GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX ];
 		uint256 generation;
 		for (; generation < 4 && _tokenId <= GEN_MAX[generation]; generation++) {}
-		Token memory token;
-		uint256 hashed;
-		do {
- 			token = _selectTraits(_seed, generation);
+		Token memory token = _selectTraits(_seed, generation);
+		uint256 hashed = _hashToken(token);
+		while (hashes[hashed] != 0) {
+			_seed = uint256(keccak256(abi.encodePacked(_seed)));
+			token = _selectTraits(_seed, generation);
 			hashed = _hashToken(token);
-		} while (hashes[hashed] != 0);
+		}
 		tokens[_tokenId] = token;
 		hashes[hashed] = _tokenId;
 	}
@@ -238,14 +239,6 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	}
 
 	// -- OWNER --
-
-	function fundVRFSubscription(uint256 _amount) external onlyOwner {
-		linkToken.transferAndCall(
-			address(vrfCoordinator),
-			_amount,
-			abi.encode(vrfSubscriptionId)
-		);
-	}
 
 	function setVRFSubscription(uint64 _vrfSubscriptionId) external onlyOwner {
 		vrfSubscriptionId = _vrfSubscriptionId;
