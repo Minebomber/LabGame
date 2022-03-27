@@ -13,6 +13,8 @@ contract TestVRFCoordinatorV2  {
 	}
 	Request[] requests;
 
+	event Requested(address indexed sender, uint32 numWords);
+
 	constructor() {}
 
   function addConsumer(uint64 subId, address consumer) external {}
@@ -28,6 +30,7 @@ contract TestVRFCoordinatorV2  {
 			msg.sender,
 			numWords
 		));
+		emit Requested(msg.sender, numWords);
 		return requests.length - 1;
 	}
 

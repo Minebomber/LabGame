@@ -15,7 +15,7 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 	 * @param _symbol ERC20 token symbol
 	 */
 	constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {
-		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 	}
 
 	// -- CONTROLLER --

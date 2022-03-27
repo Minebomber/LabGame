@@ -7,27 +7,52 @@ async function deployContract(name, ...args) {
 	return contract;
 }
 
-async function main () {
+async function main() {
 	const VRF_COORDINATOR = '0x514910771af9ca656af840dff83e8264ecf986ca';
 	const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
 	const VRF_KEYHASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
 	const VRF_SUBSCRIPTION_ID = 0;
 	const VRF_GAS_LIMIT = 100_000;
 
-	const TestVRFCoordinator = await deployContract('TestVRFCoordinatorV2');
-
-	const Serum = await deployContract('Serum', 'Serum', 'SERUM');
-	const Metadata = await deployContract('Metadata');
-	const LabGame = await deployContract(
-		'LabGame', 'LabGame', 'LABGAME', 
-		Serum.address, Metadata.address, TestVRFCoordinator.address, 
-		LINK_TOKEN, VRF_KEYHASH, VRF_SUBSCRIPTION_ID, VRF_GAS_LIMIT
+	const TestVRFCoordinator = await deployContract(
+		'TestVRFCoordinatorV2'
 	);
-	const Staking = await deployContract('Staking', LabGame.address, Serum.address);
+	const Generator = await deployContract(
+		'Generator',
+		TestVRFCoordinator.address,
+		LINK_TOKEN,
+		VRF_SUBSCRIPTION_ID,
+		VRF_KEYHASH,
+		VRF_GAS_LIMIT
+	);
+	const Serum = await deployContract(
+		'Serum',
+		'Serum',
+		'SERUM'
+	);
+	const Metadata = await deployContract(
+		'Metadata'
+	);
+	const LabGame = await deployContract(
+		'LabGame',
+		'LabGame',
+		'LABGAME',
+		Serum.address,
+		Metadata.address,
+		Generator.address
+	);
+	const Staking = await deployContract(
+		'Staking',
+		LabGame.address,
+		Serum.address
+	);
+
+	await Generator.addController(LabGame.address);
+	await Generator.addController(Staking.address);
 
 	await LabGame.setStaking(Staking.address);
 	await LabGame.setWhitelisted(false);
-	
+
 	await Metadata.setLabGame(LabGame.address);
 	for (let i = 0; i < 17; i++) {
 		await Metadata.setTraits(i, [
@@ -37,11 +62,15 @@ async function main () {
 			['D', 'iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAAH7+Yj7AAAB1klEQVRYw+2Yz0sbURDHv7MaG60INuz2mI2Q10DumkP+DAVBLx4stBcVPYpU8CbYW0nuhfZg/gsPbS4VKUg2h90giO479NAYf8RkPLhiXDXS7NLG9H1g4S0DM98ZZh6zC4SHXYqlAEDzGxzL+BxiHFQsI+dYOt8LRKAi/h52KZZyLJ2dsr7zYOI+bXkzKbOOpTP+S+gxg1eSEwayCSF329bRFHKYgMLBz5FX2lMhGdhoDLx41zZ09FQbPhtsVk0hCYpe7LB2E0yk7RMoP1jnlVqEcgDPEKgYF+6EFkSNkZZVU7izDMwxeNyx9FUtpDTXAKDv4vxTxyl7rzUQfjQb9H4s5e6pDlIons/11bJLXAI4YqCQEHLxxt7xbWMKGWHSpghYcCydbduMBnIIAInk8bd4UvYDANVPfgV2CABEaHjHaCgO/QR2yIw+73gW2KFdfp2plPVLAODIy9GgbdMEcEjAdlzIJTWBCoVCoVA7V0j4vree4utQHfNGWlZD2z/+vCKUN4Wk1oeZ1j3zdC2C307J2PpnAh/cLd+4HwDevM2ClyplfbJrBF7vqnd/TzLzeFcJZFDGt/1+7xqBdslYB/PyrVr6aAq30IVTTF+G6vy2dYoVPc8Vxl+kR5tPiaEAAAAASUVORK5CYII=']
 		]);
 	}
+
+	TestVRFCoordinator.on('Requested', async () => {
+		await TestVRFCoordinator.fulfillRequests();
+	})
 }
 
 main()
-.then(() => process.exit(0))
-.catch(error => {
-	console.error(error);
-	process.exit(1);
-});
+	.then(() => {})
+	.catch(error => {
+		console.error(error);
+		process.exit(1);
+	});

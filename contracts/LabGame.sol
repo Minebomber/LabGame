@@ -4,16 +4,15 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 
 import "./interfaces/ILabGame.sol";
 import "./interfaces/ISerum.sol";
 import "./interfaces/IMetadata.sol";
 import "./interfaces/IStaking.sol";
+import "./interfaces/IGenerator.sol";
+import "./interfaces/IRandomReceiver.sol";
 
-contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
+contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiver {
 
 	uint256 constant GEN0_PRICE = 0.06 ether;
 	uint256 constant GEN1_PRICE = 2_000 ether;
@@ -54,15 +53,10 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	ISerum serum;
 	IMetadata metadata;
 	IStaking staking;
+	IGenerator generator;
 
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
-
-	VRFCoordinatorV2Interface vrfCoordinator;
-	uint64 vrfSubscriptionId;
-	LinkTokenInterface linkToken;
-	bytes32 vrfKeyHash;
-	uint32 vrfGasLimit;
 
 	event Requested(address indexed sender, uint256 tokenId, uint256 amount);
 	event Pending(address indexed receiver, uint256  tokenId);
@@ -73,24 +67,12 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		string memory _symbol,
 		address _serum,
 		address _metadata,
-		address _vrfCoordinator,
-		address _linkToken,
-		bytes32 _vrfKeyHash,
-		uint64 _vrfSubscriptionId,
-		uint32 _vrfGasLimit 
-	) ERC721(_name, _symbol) VRFConsumerBaseV2(_vrfCoordinator) {
+		address _generator
+	) ERC721(_name, _symbol) {
 
 		serum = ISerum(_serum);
 		metadata = IMetadata(_metadata);
-
-		vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
-		linkToken = LinkTokenInterface(_linkToken);
-		vrfKeyHash = _vrfKeyHash;
-		vrfSubscriptionId = _vrfSubscriptionId;
-		vrfGasLimit = _vrfGasLimit;
-		if (_vrfCoordinator != address(0)) {
-			vrfCoordinator.addConsumer(vrfSubscriptionId, address(this));
-		}
+		generator = IGenerator(_generator);
 
 		for (uint256 i; i < MAX_TRAITS; i++) {
 			rarities[i] = [ 255, 170, 85, 85 ];
@@ -125,16 +107,24 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 
 	function mint(uint256 _amount) external payable whenNotPaused verifyMint(_amount) {
 		uint tokenId = totalSupply() + 1;
-		uint256 requestId = vrfCoordinator.requestRandomWords(
-			vrfKeyHash,
-			vrfSubscriptionId,
-			3, // Confirmations
-			vrfGasLimit,
-			uint32(_amount)
-		);
+		uint256 requestId = generator.requestRandom(_amount);
 		mintRequests[requestId] = MintRequest(_msgSender(), tokenId, _amount);
 		totalPending += _amount;
 		emit Requested(_msgSender(), tokenId, _amount);
+	}
+	
+	function fulfillRandom(uint256 _requestId, uint256[] memory _randomWords) external override {
+		require(_msgSender() == address(generator), "Not authorized");
+		MintRequest memory request = mintRequests[_requestId];
+		for (uint256 i; i < request.amount; i++) {
+			// TODO: Token stealing, change pendingMints key
+			pendingMints[request.sender].push(PendingMint(
+				request.tokenId + i,
+				_randomWords[i]
+			));
+			emit Pending(request.sender, request.tokenId + i);
+		}
+		delete mintRequests[_requestId];
 	}
 
 	function reveal() external whenNotPaused {
@@ -182,22 +172,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		require(_index < pendingMints[_account].length, "Invalid index");
 		return pendingMints[_account][_index].tokenId;
 	}
-
+	
 	// -- INTERNAL --
 
-	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
-		MintRequest memory request = mintRequests[_requestId];
-		for (uint256 i; i < request.amount; i++) {
-			// TODO: Token stealing, change pendingMints key
-			pendingMints[request.sender].push(PendingMint(
-				request.tokenId + i,
-				_randomWords[i]
-			));
-			emit Pending(request.sender, request.tokenId + i);
-		}
-		delete mintRequests[_requestId];
-	}
-	
 	function _generate(uint256 _tokenId, uint256 _seed) internal {
 		uint256[4] memory GEN_MAX = [ GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX ];
 		uint256 generation;
@@ -240,14 +217,6 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 
 	// -- OWNER --
 
-	function setVRFSubscription(uint64 _vrfSubscriptionId) external onlyOwner {
-		vrfSubscriptionId = _vrfSubscriptionId;
-	}
-
-	function setVRFGasLimit(uint32 _vrfGasLimit) external onlyOwner {
-		vrfGasLimit = _vrfGasLimit;
-	}
-
 	function whitelistAdd(address _account) external onlyOwner {
 		whitelist[_account] = true;
 	}
@@ -270,6 +239,10 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 
 	function setStaking(address _staking) external onlyOwner {
 		staking = IStaking(_staking);
+	}
+
+	function setGenerator(address _generator) external onlyOwner {
+		generator = IGenerator(_generator);
 	}
 
 	function setPaused(bool _state) external onlyOwner {
