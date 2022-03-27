@@ -37,8 +37,8 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 
 	struct MintRequest {
 		address sender;
-		uint256 tokenId;
-		uint256 amount;
+		uint64 tokenId;
+		uint32 amount;
 	}
 	mapping(uint256 => MintRequest) mintRequests;
 
@@ -108,7 +108,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	function mint(uint256 _amount) external payable whenNotPaused verifyMint(_amount) {
 		uint tokenId = totalSupply() + 1;
 		uint256 requestId = generator.requestRandom(_amount);
-		mintRequests[requestId] = MintRequest(_msgSender(), tokenId, _amount);
+		mintRequests[requestId] = MintRequest(_msgSender(), uint64(tokenId), uint32(_amount));
 		totalPending += _amount;
 		emit Requested(_msgSender(), tokenId, _amount);
 	}
