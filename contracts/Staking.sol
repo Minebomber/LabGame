@@ -11,6 +11,12 @@ import "./LabGame.sol";
 import "./interfaces/ISerum.sol";
 
 contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuard {
+	
+	uint256 constant MIN_CLAIM = 2000 ether;
+
+	uint256 constant GEN0_RATE = 1000 ether;
+	uint256 constant GEN1_RATE = 1200 ether;
+	uint256 constant GEN2_RATE = 1500 ether;
 
 	struct Stake {
 		address account;
@@ -72,7 +78,7 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 
 	// -- EXTERNAL --
 
-	function stake(uint16[] calldata _tokenIds) external whenNotPaused nonReentrant {
+	function stakeTokens(uint16[] calldata _tokenIds) external whenNotPaused nonReentrant {
 		for (uint256 i; i < _tokenIds.length; i++) {
 			require(_msgSender() == labGame.ownerOf(_tokenIds[i]), "Token not owned");
 			labGame.transferFrom(_msgSender(), address(this), _tokenIds[i]);
@@ -85,7 +91,7 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 		}
 	}
 
-	function claim(uint16[] memory _tokenIds, bool _unstake) external whenNotPaused nonReentrant {
+	function claimTokens(uint16[] memory _tokenIds, bool _unstake) external whenNotPaused nonReentrant {
 
 	}
 
@@ -111,6 +117,26 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 			uint16(_tokenId),
 			uint80(serumPerWeight)
 		));
+	}
+
+	function _claimScientist(uint256 _tokenId, uint256 _generation, bool _unstake) internal {
+		Stake memory stake = scientists[_tokenId];
+		require(stake.account == _msgSender(), "Token not owned");
+		if (_generation < 3) {
+			uint256[3] memory SERUM_RATE = [ GEN0_RATE, GEN1_RATE, GEN2_RATE ];
+			uint256 amount = (block.timestamp - stake.value) * SERUM_RATE[_generation] / 1 days;
+			require(amount >= MIN_CLAIM, "Not enough to claim");
+		}
+		if (_unstake) {
+			delete scientists[_tokenId];
+			labGame.safeTransferFrom(address(this), _msgSender(), _tokenId);
+		} else {
+			scientists[_tokenId].value = uint80(block.timestamp);
+		}
+	}
+
+	function _claimMutant(uint256 _tokenId, uint256 _generation, bool _unstake) internal {
+
 	}
 
 	// -- OWNER -- 
