@@ -103,12 +103,13 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
 		if (whitelisted) require(isWhitelisted(_msgSender()), "Not whitelisted");
 		
+		uint256 id = totalSupply();
+		uint256 max = id + _amount;
+		require(max <= GEN3_MAX, "Sold out");
+		
 		uint256[4] memory GEN_MAX = [ GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX ];
 		uint256[4] memory GEN_PRICE = [ GEN0_PRICE, GEN1_PRICE, GEN2_PRICE, GEN3_PRICE ];
 		
-		uint256 id = totalSupply() + totalPending;
-		uint256 max = id + _amount;
-		require(max <= GEN_MAX[3], "Sold out");
 		for (uint256 i; i < 4; i++) {
 			if (id < GEN_MAX[i]) {
 				require(max <= GEN_MAX[i], "Generation limit");
@@ -123,7 +124,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	// -- EXTERNAL --
 
 	function mint(uint256 _amount) external payable whenNotPaused verifyMint(_amount) {
-		uint tokenId = totalSupply() + totalPending + 1;
+		uint tokenId = totalSupply() + 1;
 		uint256 requestId = vrfCoordinator.requestRandomWords(
 			vrfKeyHash,
 			vrfSubscriptionId,
@@ -151,6 +152,10 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
 		require(_exists(_tokenId), "URI query for nonexistent token");
 		return metadata.tokenURI(_tokenId);
+	}
+
+	function totalSupply() public view override returns (uint256) {
+		return ERC721Enumerable.totalSupply() + totalPending;
 	}
 
 	function getToken(uint256 _tokenId) external view override returns (Token memory) {
