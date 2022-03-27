@@ -64,9 +64,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, VRFConsumerBa
 	bytes32 vrfKeyHash;
 	uint32 vrfGasLimit;
 
-	event TokensRequested(address minter, uint256 tokenId, uint256 amount);
-	event TokenPending(uint256 tokenId, address receiver);
-	event TokenRevealed(uint256 tokenId);
+	event TokensRequested(address indexed minter, uint256 tokenId, uint256 amount);
+	event TokenPending(uint256 indexed tokenId, address indexed receiver);
+	event TokenRevealed(uint256 indexed tokenId);
 
 	constructor(
 		string memory _name,
