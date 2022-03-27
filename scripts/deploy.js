@@ -26,6 +26,7 @@ async function main () {
 	const Staking = await deployContract('Staking', LabGame.address, Serum.address);
 
 	await LabGame.setStaking(Staking.address);
+	await LabGame.setWhitelisted(false);
 	
 	await Metadata.setLabGame(LabGame.address);
 	for (let i = 0; i < 17; i++) {
