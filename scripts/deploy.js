@@ -52,6 +52,9 @@ async function main() {
 	await Generator.addController(LabGame.address);
 	await Generator.addController(Staking.address);
 
+	await Serum.addController(LabGame.address);
+	await Serum.addController(Staking.address);
+
 	await LabGame.setStaking(Staking.address);
 	await LabGame.setWhitelisted(false);
 
