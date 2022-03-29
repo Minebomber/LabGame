@@ -27,35 +27,84 @@ describe('Generator', function() {
 		await this.generator.deployed();
 	});
 	
-	it('non-admin setPaused revert', async function() {
+	it('non-owner setPaused revert', async function() {
 		await expect(
 			this.generator.connect(this.other).setPaused(true)
 		).to.be.reverted;
 	});
 
-	it('admin setPaused success', async function() {
+	it('owner setPaused success', async function() {
 		await this.generator.connect(this.owner).setPaused(true);
 		expect(await this.generator.paused()).to.equal(true);
 	});
 
-	it('non-admin setSubscriptionId revert', async function() {
+	it('non-owner setSubscriptionId revert', async function() {
 		await expect(
 			this.generator.connect(this.other).setSubscriptionId(123)
 		).to.be.reverted;
 	});
 
-	it('admin setSubscriptionId success', async function() {
+	it('owner setSubscriptionId success', async function() {
 		await this.generator.connect(this.owner).setSubscriptionId(1);
 	});
 
-	it('non-admin setCallbackGasLimit revert', async function() {
+	it('non-owner setCallbackGasLimit revert', async function() {
 		await expect(
 			this.generator.connect(this.other).setCallbackGasLimit(0)
 		).to.be.reverted;
 	});
 
-	it('admin setCallbackGasLimit success', async function() {
+	it('owner setCallbackGasLimit success', async function() {
 		await this.generator.connect(this.owner).setCallbackGasLimit(0);
+	});
+	
+	it('non-owner addController revert', async function() {
+		await expect(
+			this.generator.connect(this.other).addController(this.other.address)
+		).to.be.reverted;
+	});
+
+	it('owner addController success', async function() {
+		await this.generator.connect(this.owner).addController(this.other.address);
+		expect(
+			await this.generator.hasRole(this.generator.CONTROLLER_ROLE(), this.other.address)
+		).to.equal(true);
+	});
+	
+	it('non-owner removeController revert', async function() {
+		await expect(
+			this.generator.connect(this.other).addController(this.other.address)
+		).to.be.reverted;
+	});
+
+	it('owner removeController success', async function() {
+		await this.generator.connect(this.owner).addController(this.other.address);
+		await this.generator.connect(this.owner).removeController(this.other.address);
+		expect(
+			await this.generator.hasRole(this.generator.CONTROLLER_ROLE(), this.other.address)
+		).to.equal(false);
+	});
+
+	it('non-controller requestRandom revert', async function() {
+		await expect(
+			this.generator.connect(this.other).addController(this.other.address)
+		).to.be.reverted;
+	});
+
+	it('controller requestRandom success', async function() {
+		await expect(
+			this.generator.connect(this.other).addController(this.other.address)
+		).to.be.reverted;
+	});
+	it('paused requestRandom revert', async function() {
+		await expect(
+			this.generator.connect(this.other).addController(this.other.address)
+		).to.be.reverted;
+	});
+	it('non-paused requestRandom success', async function() {
+		await expect(
+			this.generator.connect(this.other).addController(this.other.address)
+		).to.be.reverted;
 	});
 });
 	

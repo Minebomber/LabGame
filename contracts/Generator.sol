@@ -38,7 +38,7 @@ contract Generator is VRFConsumerBaseV2, AccessControl, Pausable {
 		vrfCoordinator.addConsumer(subscriptionId, address(this));
 	}
 
-	function requestRandom(uint256 _count) external onlyRole(CONTROLLER_ROLE) returns (uint256) {
+	function requestRandom(uint256 _count) external whenNotPaused onlyRole(CONTROLLER_ROLE) returns (uint256) {
 		uint256 requestId = vrfCoordinator.requestRandomWords(
 			keyHash,
 			subscriptionId,

@@ -59,7 +59,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	uint8[][MAX_TRAITS] aliases;
 
 	event Requested(address indexed sender, uint256 tokenId, uint256 amount);
-	event Pending(address indexed receiver, uint256  tokenId);
+	event Pending(address indexed receiver, uint256 tokenId);
 	event Revealed(address indexed receiver, uint256 tokenId);
 
 	constructor(
