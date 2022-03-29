@@ -8,11 +8,12 @@ async function deployContract(name, ...args) {
 }
 
 async function main() {
-	const VRF_COORDINATOR = '0x514910771af9ca656af840dff83e8264ecf986ca';
+	//const VRF_COORDINATOR = '0x514910771af9ca656af840dff83e8264ecf986ca';
 	const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
-	const VRF_KEYHASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
-	const VRF_SUBSCRIPTION_ID = 0;
-	const VRF_GAS_LIMIT = 100_000;
+	const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
+	const SUBSCRIPTION_ID = 0;
+	const REQUEST_CONFIRMATIONS = 3;
+	const CALLBACK_GAS_LIMIT = 100_000;
 
 	const TestVRFCoordinator = await deployContract(
 		'TestVRFCoordinatorV2'
@@ -21,9 +22,10 @@ async function main() {
 		'Generator',
 		TestVRFCoordinator.address,
 		LINK_TOKEN,
-		VRF_SUBSCRIPTION_ID,
-		VRF_KEYHASH,
-		VRF_GAS_LIMIT
+		KEY_HASH,
+		SUBSCRIPTION_ID,
+		REQUEST_CONFIRMATIONS,
+		CALLBACK_GAS_LIMIT
 	);
 	const Serum = await deployContract(
 		'Serum',

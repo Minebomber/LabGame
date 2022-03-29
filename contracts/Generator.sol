@@ -15,8 +15,9 @@ contract Generator is VRFConsumerBaseV2, AccessControl, Pausable {
 	
 	VRFCoordinatorV2Interface vrfCoordinator;
 	LinkTokenInterface linkToken;
-	uint64 subscriptionId;
 	bytes32 keyHash;
+	uint64 subscriptionId;
+	uint16 requestConfirmations;
 	uint32 callbackGasLimit;
 
 	mapping(uint256 => address) requests;
@@ -24,17 +25,20 @@ contract Generator is VRFConsumerBaseV2, AccessControl, Pausable {
 	constructor(
 		address _vrfCoordinator,
 		address _linkToken,
-		uint64 _subscriptionId,
 		bytes32 _keyHash,
+		uint64 _subscriptionId,
+		uint16 _requestConfirmations,
 		uint32 _callbackGasLimit
 	) VRFConsumerBaseV2(_vrfCoordinator) {
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
 		vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
 		linkToken = LinkTokenInterface(_linkToken);
-		subscriptionId = _subscriptionId;
 		keyHash = _keyHash;
+		subscriptionId = _subscriptionId;
+		requestConfirmations = _requestConfirmations;
 		callbackGasLimit = _callbackGasLimit;
+
 		vrfCoordinator.addConsumer(subscriptionId, address(this));
 	}
 
@@ -42,7 +46,7 @@ contract Generator is VRFConsumerBaseV2, AccessControl, Pausable {
 		uint256 requestId = vrfCoordinator.requestRandomWords(
 			keyHash,
 			subscriptionId,
-			3, // Confirmations
+			requestConfirmations,
 			callbackGasLimit,
 			uint32(_count)
 		);
@@ -58,8 +62,16 @@ contract Generator is VRFConsumerBaseV2, AccessControl, Pausable {
 
 	// -- ADMIN --
 
+	function setKeyHash(bytes32 _keyHash) external onlyRole(DEFAULT_ADMIN_ROLE) {
+		keyHash = _keyHash;
+	}
+
 	function setSubscriptionId(uint64 _subscriptionId) external onlyRole(DEFAULT_ADMIN_ROLE) {
 		subscriptionId = _subscriptionId;
+	}
+
+	function setRequestConfirmations(uint16 _requestConfirmations) external onlyRole(DEFAULT_ADMIN_ROLE) {
+		requestConfirmations = _requestConfirmations;
 	}
 
 	function setCallbackGasLimit(uint32 _callbackGasLimit) external onlyRole(DEFAULT_ADMIN_ROLE) {
