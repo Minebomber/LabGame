@@ -62,7 +62,7 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 			accounts[_msgSender()].push(_tokenIds[i]);
 
 			ILabGame.Token memory token = labGame.getToken(_tokenIds[i]);
-			if ((token.data & 64) != 0)
+			if ((token.data & 128) != 0)
 				_stakeMutant(_tokenIds[i], token.data & 3);
 			else
 				_stakeScientist(_tokenIds[i]);
@@ -106,6 +106,15 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 		uint256 amount = request.amount - taxed;
 		if (amount > 0)
 			serum.mint(request.receiver, amount);
+	}
+	
+	function selectRandomOwner(uint256 _seed) external view override returns (address) {
+		if (mutants.length == 0) return address(0);
+		Stake memory stake = mutants [ (_seed & 0xFFFFFFFF) % mutants.length ];
+		uint256 generation = labGame.getToken(stake.tokenId).data & 3;
+		if ( ((_seed >> 32) % 1000) < ([100, 125, 150, 175][generation]) )
+			return stake.owner;
+		return address(0);
 	}
 	
 	function stakedCount(address _account) external view returns (uint256) {

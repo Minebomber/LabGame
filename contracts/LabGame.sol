@@ -80,7 +80,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		}
 	}
 
-	modifier verifyMint(uint256 _amount) {
+	// -- EXTERNAL --
+
+	function mint(uint256 _amount) external payable whenNotPaused {
 		require(tx.origin == _msgSender());
 		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
 		if (whitelisted) require(isWhitelisted(_msgSender()), "Not whitelisted");
@@ -100,25 +102,20 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 				break;
 			}
 		}
-		_;
-	}
 
-	// -- EXTERNAL --
-
-	function mint(uint256 _amount) external payable whenNotPaused verifyMint(_amount) {
-		uint tokenId = totalSupply() + 1;
 		uint256 requestId = generator.requestRandom(_amount);
-		mintRequests[requestId] = MintRequest(_msgSender(), uint64(tokenId), uint32(_amount));
+		mintRequests[requestId] = MintRequest(_msgSender(), uint64(id + 1), uint32(_amount));
 		totalPending += _amount;
-		emit Requested(_msgSender(), tokenId, _amount);
+		emit Requested(_msgSender(), id + 1, _amount);
 	}
 	
 	function fulfillRandom(uint256 _requestId, uint256[] memory _randomWords) external override {
 		require(_msgSender() == address(generator), "Not authorized");
 		MintRequest memory request = mintRequests[_requestId];
 		for (uint256 i; i < request.amount; i++) {
-			// TODO: Token stealing, change pendingMints key
-			pendingMints[request.sender].push(PendingMint(
+			address recipient = _selectRecipient(request.tokenId + i, _randomWords[i] >> 160);
+			if (recipient == address(0)) recipient = request.sender;
+			pendingMints[recipient].push(PendingMint(
 				request.tokenId + i,
 				_randomWords[i]
 			));
@@ -191,9 +188,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	}
 
 	function _selectTraits(uint256 _seed, uint256 _generation) internal view returns (Token memory token) {
-		token.data = 128 | uint8(_generation);
+		token.data = uint8(_generation);
 		bool mutant = ((_seed & 0xFFFF) % 10) == 0; 
-		token.data |= mutant ? 64 : 0;
+		token.data |= mutant ? 128 : 0;
 		(uint256 start, uint256 count) = mutant ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		for (uint256 i; i < count; i++) {
 			_seed >>= 16;
@@ -213,6 +210,11 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 			_token.data,
 			_token.trait
 		)));
+	}
+
+	function _selectRecipient(uint256 _tokenId, uint256 _seed) internal view returns (address) {
+		if (_tokenId <= GEN0_MAX) return address(0);
+		return staking.selectRandomOwner(_seed);
 	}
 
 	// -- OWNER --

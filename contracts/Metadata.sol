@@ -42,7 +42,7 @@ contract Metadata is IMetadata, Ownable {
 		return string(abi.encodePacked(
 			'data:application/json;base64,',
 			abi.encodePacked(
-				'{"name":"', ((token.data & 64) != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', _tokenId.toString(),
+				'{"name":"', ((token.data & 128) != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', _tokenId.toString(),
 				'","description":"', DESCRIPTION,
 				'","image":"data:image/svg+xml;base64,', _image(token).encode(),
 				'","attributes":', _attributes(token),
@@ -59,7 +59,7 @@ contract Metadata is IMetadata, Ownable {
 	 * @return SVG image string for the token
 	 */
 	function _image(ILabGame.Token memory _token) internal view returns (bytes memory) {
-		(uint256 start, uint256 count) = ((_token.data & 64) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
+		(uint256 start, uint256 count) = ((_token.data & 128) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		bytes memory images;
 		for (uint256 i; i < count; i++) {
 			images = abi.encodePacked(
@@ -102,7 +102,7 @@ contract Metadata is IMetadata, Ownable {
 			"Arm"
 		];
 
-		(uint256 start, uint256 count) = ((_token.data & 64) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
+		(uint256 start, uint256 count) = ((_token.data & 128) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		bytes memory attributes;
 		for (uint256 i; i < count; i++) {
 			attributes = abi.encodePacked(
@@ -117,7 +117,7 @@ contract Metadata is IMetadata, Ownable {
 		return abi.encodePacked(
 			'[', attributes,
 			'{"trait_type":"Generation", "value":"', uint256(_token.data & 3).toString(), '"},',
-			'{"trait_type":"Type","value":"', ((_token.data & 64) != 0) ? TYPE1_NAME : TYPE0_NAME, '"}]'
+			'{"trait_type":"Type","value":"', ((_token.data & 128) != 0) ? TYPE1_NAME : TYPE0_NAME, '"}]'
 		);
 	}
 
