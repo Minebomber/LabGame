@@ -39,14 +39,15 @@ async function main() {
 		'LabGame',
 		'LabGame',
 		'LABGAME',
+		Generator.address,
 		Serum.address,
-		Metadata.address,
-		Generator.address
+		Metadata.address
 	);
 	const Staking = await deployContract(
 		'Staking',
-		LabGame.address,
-		Serum.address
+		Generator.address,
+		Serum.address,
+		LabGame.address
 	);
 
 	await Generator.addController(LabGame.address);

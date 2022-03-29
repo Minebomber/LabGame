@@ -41,14 +41,14 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 
 	mapping(address => uint256[]) accounts;
 
-	LabGame labGame;
-	ISerum serum;
 	IGenerator generator;
+	ISerum serum;
+	LabGame labGame;
 
-	constructor(address _labGame, address _serum, address _generator) {
-		labGame = LabGame(_labGame);
-		serum = ISerum(_serum);
+	constructor(address _generator, address _serum, address _labGame) {
 		generator = IGenerator(_generator);
+		serum = ISerum(_serum);
+		labGame = LabGame(_labGame);
 	}
 
 	// -- EXTERNAL --
@@ -197,12 +197,16 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 
 	// -- OWNER -- 
 
-	function setLabGame(address _labGame) external onlyOwner {
-		labGame = LabGame(_labGame);
+	function setGenerator(address _generator) external onlyOwner {
+		generator = IGenerator(_generator);
 	}
 
 	function setSerum(address _serum) external onlyOwner {
 		serum = ISerum(_serum);
+	}
+
+	function setLabGame(address _labGame) external onlyOwner {
+		labGame = LabGame(_labGame);
 	}
 
 	function setPaused(bool _state) external onlyOwner {

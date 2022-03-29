@@ -50,10 +50,10 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 
 	uint256 totalPending;
 
+	IGenerator generator;
 	ISerum serum;
 	IMetadata metadata;
 	IStaking staking;
-	IGenerator generator;
 
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
@@ -65,14 +65,14 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	constructor(
 		string memory _name,
 		string memory _symbol,
+		address _generator,
 		address _serum,
-		address _metadata,
-		address _generator
+		address _metadata
 	) ERC721(_name, _symbol) {
 
+		generator = IGenerator(_generator);
 		serum = ISerum(_serum);
 		metadata = IMetadata(_metadata);
-		generator = IGenerator(_generator);
 
 		for (uint256 i; i < MAX_TRAITS; i++) {
 			rarities[i] = [ 255, 170, 85, 85 ];
@@ -229,6 +229,10 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		whitelisted = _whitelisted;
 	}
 
+	function setGenerator(address _generator) external onlyOwner {
+		generator = IGenerator(_generator);
+	}
+
 	function setSerum(address _serum) external onlyOwner {
 		serum = ISerum(_serum);
 	}
@@ -239,10 +243,6 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 
 	function setStaking(address _staking) external onlyOwner {
 		staking = IStaking(_staking);
-	}
-
-	function setGenerator(address _generator) external onlyOwner {
-		generator = IGenerator(_generator);
 	}
 
 	function setPaused(bool _state) external onlyOwner {
