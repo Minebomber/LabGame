@@ -19,12 +19,12 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	uint256 constant GEN2_PRICE = 10_000 ether;
 	uint256 constant GEN3_PRICE = 50_000 ether;
 	
-	uint256 constant GEN0_MAX = 10_000;
-	uint256 constant GEN1_MAX = 15_000;
-	uint256 constant GEN2_MAX = 17_500;
-	uint256 constant GEN3_MAX = 20_000;
+	uint256 constant GEN0_MAX =  5_000;
+	uint256 constant GEN1_MAX =  7_500;
+	uint256 constant GEN2_MAX =  8_750;
+	uint256 constant GEN3_MAX = 10_000;
 
-	uint256 constant MINT_LIMIT = 10;
+	uint256 constant MINT_LIMIT = 4;
 
 	uint256 constant MAX_TRAITS = 17;
 	uint256 constant TYPE_OFFSET = 9;
@@ -58,9 +58,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
 
-	event Requested(address indexed sender, uint256 tokenId, uint256 amount);
-	event Pending(address indexed receiver, uint256 tokenId);
-	event Revealed(address indexed receiver, uint256 tokenId);
+	event Requested(address indexed _sender, uint256 _tokenId, uint256 _amount);
+	event Pending(address indexed _receiver, uint256 _tokenId);
+	event Revealed(address indexed _receiver, uint256 _tokenId);
 
 	constructor(
 		string memory _name,

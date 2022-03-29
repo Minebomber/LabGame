@@ -45,6 +45,9 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 	ISerum serum;
 	LabGame labGame;
 
+	event Staked(address indexed _account, uint256 indexed _tokenId);
+	event Claimed(address indexed _account, uint256 indexed _tokenId, uint256 _earned, bool _unstaked);
+
 	constructor(address _generator, address _serum, address _labGame) {
 		generator = IGenerator(_generator);
 		serum = ISerum(_serum);
@@ -66,6 +69,8 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 				_stakeMutant(_tokenIds[i], token.data & 3);
 			else
 				_stakeScientist(_tokenIds[i]);
+
+			emit Staked(_msgSender(), _tokenIds[i]);
 		}
 	}
 
@@ -164,6 +169,8 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 		} else if (amount >= MIN_CLAIM) {
 			scientists[_tokenId].value = uint80(block.timestamp);
 		}
+
+		emit Claimed(_msgSender(), _tokenId, amount, _unstake);
 	}
 
 	function _claimMutant(uint256 _tokenId, uint256 _generation, bool _unstake) internal returns (uint256 amount) {
@@ -183,6 +190,8 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 		} else if (amount > 0) {
 			mutants[ mutantIndices[_tokenId] ].value = uint80(serumPerWeight);
 		}
+
+		emit Claimed(_msgSender(), _tokenId, amount, _unstake);
 	}
 
 	function _accountRemoveTokenId(address _account, uint256 _tokenId) internal {
