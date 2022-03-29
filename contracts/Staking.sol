@@ -70,10 +70,9 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 	}
 
 	function claimScientists(uint256[] calldata _tokenIds, bool _unstake) external override whenNotPaused nonReentrant {
-		ILabGame.Token memory token;
 		uint256 amount;
 		for (uint256 i; i < _tokenIds.length; i++) {
-			token = labGame.getToken(_tokenIds[i]);
+			ILabGame.Token memory token = labGame.getToken(_tokenIds[i]);
 			amount += _claimScientist(_tokenIds[i], token.data & 3, _unstake);
 		}
 
@@ -82,10 +81,9 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 	}
 
 	function claimMutants(uint256[] calldata _tokenIds, bool _unstake) external override whenNotPaused nonReentrant {
-		ILabGame.Token memory token;
 		uint256 amount;
 		for (uint256 i = _tokenIds.length; i > 0; i--) {
-			token = labGame.getToken(_tokenIds[i]);
+			ILabGame.Token memory token = labGame.getToken(_tokenIds[i]);
 			amount += _claimMutant(_tokenIds[i], token.data & 3, _unstake);
 		}
 		if (amount > 0)
@@ -205,18 +203,6 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 	}
 
 	// -- OWNER -- 
-
-	function setGenerator(address _generator) external onlyOwner {
-		generator = IGenerator(_generator);
-	}
-
-	function setSerum(address _serum) external onlyOwner {
-		serum = ISerum(_serum);
-	}
-
-	function setLabGame(address _labGame) external onlyOwner {
-		labGame = LabGame(_labGame);
-	}
 
 	function setPaused(bool _state) external onlyOwner {
 		if (_state)	_pause();

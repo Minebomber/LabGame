@@ -112,8 +112,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	function fulfillRandom(uint256 _requestId, uint256[] memory _randomWords) external override {
 		require(_msgSender() == address(generator), "Not authorized");
 		MintRequest memory request = mintRequests[_requestId];
+		address recipient;
 		for (uint256 i; i < request.amount; i++) {
-			address recipient = _selectRecipient(request.tokenId + i, _randomWords[i] >> 160);
+			recipient = _selectRecipient(request.tokenId + i, _randomWords[i] >> 160);
 			if (recipient == address(0)) recipient = request.sender;
 			pendingMints[recipient].push(PendingMint(
 				request.tokenId + i,
@@ -229,18 +230,6 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 
 	function setWhitelisted(bool _whitelisted) external onlyOwner {
 		whitelisted = _whitelisted;
-	}
-
-	function setGenerator(address _generator) external onlyOwner {
-		generator = IGenerator(_generator);
-	}
-
-	function setSerum(address _serum) external onlyOwner {
-		serum = ISerum(_serum);
-	}
-
-	function setMetadata(address _metadata) external onlyOwner {
-		metadata = IMetadata(_metadata);
 	}
 
 	function setStaking(address _staking) external onlyOwner {
