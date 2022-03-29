@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "./interfaces/IStaking.sol";
 import "./LabGame.sol";
@@ -14,7 +13,6 @@ import "./interfaces/IGenerator.sol";
 import "./interfaces/IRandomReceiver.sol";
 
 contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuard, IRandomReceiver {
-	using SafeMath for uint256;
 	
 	uint256 constant MIN_CLAIM = 2000 ether;
 
@@ -22,11 +20,12 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 	uint256 constant GEN1_RATE = 1200 ether;
 	uint256 constant GEN2_RATE = 1500 ether;
 
-	struct Scientist {
+	struct Stake {
+		address owner;
 		uint16 tokenId;
-		uint240 timestamp;
+		uint80 value;
 	}
-	mapping(address => Scientist[]) scientists;
+	mapping(uint256 => Stake) scientists;
 
 	struct SerumRequest {
 		address receiver;
@@ -34,12 +33,7 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 	}
 	mapping(uint256 => SerumRequest) serumRequests;
 
-	struct Mutant {
-		address account;
-		uint16 tokenId;
-		uint80 value;
-	}
-	Mutant[] mutants;
+	Stake[] mutants;
 	mapping(uint256 => uint256) mutantIndices;
 
 	uint256 totalWeight;
@@ -57,13 +51,13 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 
 	// -- EXTERNAL --
 
-	function stakeTokens(uint16[] calldata _tokenIds) external whenNotPaused nonReentrant {
+	function stakeTokens(uint256[] calldata _tokenIds) external whenNotPaused nonReentrant {
 		for (uint256 i; i < _tokenIds.length; i++) {
 			// Transfer token to the staking contract
 			require(_msgSender() == labGame.ownerOf(_tokenIds[i]), "Token not owned");
 			labGame.transferFrom(_msgSender(), address(this), _tokenIds[i]);
 			require(address(this) == labGame.ownerOf(_tokenIds[i]), "Token not transferred");
-			
+			// Get token data and stake
 			ILabGame.Token memory token = labGame.getToken(_tokenIds[i]);
 			if ((token.data & 64) != 0) // token.isMutant
 				_stakeMutant(_tokenIds[i], token.data & 3);
@@ -72,18 +66,27 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 		}
 	}
 
-	function claimScientists(uint16[] calldata _tokenIndices, bool _unstake) external whenNotPaused nonReentrant {
-		Scientist[] storage staked = scientists[_msgSender()];
-		uint maxIndex = staked.length;
+	function claimScientists(uint256[] calldata _tokenIds, bool _unstake) external whenNotPaused nonReentrant {
+		ILabGame.Token memory token;
 		uint256 amount;
-		for (uint256 i; i < _tokenIndices.length; i++) {
-			require(_tokenIndices[i] < maxIndex, "Invalid token index");
-			ILabGame.Token memory token = labGame.getToken(staked[_tokenIndices[i]].tokenId);
-			amount += _claimScientist(_tokenIndices[i], token.data & 3, _unstake);
+		for (uint256 i; i < _tokenIds.length; i++) {
+			token = labGame.getToken(_tokenIds[i]);
+			amount += _claimScientist(_tokenIds[i], token.data & 3, _unstake);
 		}
 
 		uint256 requestId = generator.requestRandom(1);
 		serumRequests[requestId] = SerumRequest(_msgSender(), amount);
+	}
+
+	function claimMutants(uint256[] calldata _tokenIds, bool _unstake) external whenNotPaused nonReentrant {
+		ILabGame.Token memory token;
+		uint256 amount;
+		for (uint256 i = _tokenIds.length; i > 0; i--) {
+			token = labGame.getToken(_tokenIds[i]);
+			amount += _claimMutant(_tokenIds[i], token.data & 3, _unstake);
+		}
+		if (amount > 0)
+			serum.mint(_msgSender(), amount);
 	}
 
 	function fulfillRandom(uint256 _requestId, uint256[] memory _randomWords) external {
@@ -92,32 +95,14 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 		uint256 taxed = 0;
 		uint256 random = _randomWords[0];
 		if ((random & 1) == 1) taxed = request.amount;
-		else taxed = request.amount.mul( _selectTaxRate(random >> 1).div(100) );
+		else taxed = request.amount * _selectTaxRate(random >> 1) / 100;
 
 		if (totalWeight > 0)
-			serumPerWeight = serumPerWeight.add(taxed.div(totalWeight));
+			serumPerWeight += taxed / totalWeight;
 	
-		uint256 amount = request.amount.sub(taxed);
+		uint256 amount = request.amount - taxed;
 		if (amount > 0)
 			serum.mint(request.receiver, amount);
-	}
-
-	// Returns tax% in as int
-	function _selectTaxRate(uint256 _seed) internal view returns (uint256) {
-		if (mutants.length == 0) return 0;
-		ILabGame.Token memory token = labGame.getToken( mutants[_seed % mutants.length].tokenId );
-		return [15, 20, 25, 40][token.data & 3];
-	}
-
-	function claimMutants(uint16[] calldata _tokenIds, bool _unstake) external whenNotPaused nonReentrant {
-		uint256 amount;
-		for (uint256 i; i < _tokenIds.length; i++) {
-			require(address(this) == labGame.ownerOf(_tokenIds[i]), "Token not staked");
-			ILabGame.Token memory token = labGame.getToken(_tokenIds[i]);
-			amount += _claimMutant(_tokenIds[i], token.data & 3, _unstake);
-		}
-		if (amount > 0)
-			serum.mint(_msgSender(), amount);
 	}
 
 	function onERC721Received(address, address _from, uint256, bytes calldata) external pure override returns (bytes4) {
@@ -128,15 +113,16 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 	// -- INTERNAL --
 
 	function _stakeScientist(uint256 _tokenId) internal {
-		scientists[_msgSender()].push(Scientist(
+		scientists[_tokenId] = Stake(
+			_msgSender(),
 			uint16(_tokenId),
-			uint240(block.timestamp)
-		));
+			uint80(block.timestamp)
+		);
 	}
 
 	function _stakeMutant(uint256 _tokenId, uint256 _generation) internal {
 		mutantIndices[_tokenId] = mutants.length;
-		mutants.push(Mutant(
+		mutants.push(Stake(
 			_msgSender(),
 			uint16(_tokenId),
 			uint80(serumPerWeight)
@@ -144,48 +130,50 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 		totalWeight += [3, 4, 5, 8][_generation];
 	}
 
-	function _claimScientist(uint256 _index, uint256 _generation, bool _unstake) internal returns (uint256 amount) {
-		Scientist[] storage staked = scientists[_msgSender()];
-		Scientist memory stake = staked[_index];
+	function _claimScientist(uint256 _tokenId, uint256 _generation, bool _unstake) internal returns (uint256 amount) {
+		Stake memory stake = scientists[_tokenId];
+		require(stake.owner == _msgSender(), "Token not owned");
 		if (_generation < 3) {
-			uint256[3] memory SERUM_RATE = [ GEN0_RATE, GEN1_RATE, GEN2_RATE ];
-			amount = block.timestamp.sub(stake.timestamp).mul(SERUM_RATE[_generation]).div(1 days);
-			require(amount >= MIN_CLAIM, "Not enough to claim");
+			amount = (block.timestamp - stake.value) * [GEN0_RATE, GEN1_RATE, GEN2_RATE][_generation] / 1 days;
 		} else {
 			// TODO: Mint blueprint: call IBlueprint with amount to use generator for random rarity
 		}
 
 		if (_unstake) {
-			Scientist memory swap = staked[staked.length - 1];
-			staked[_index] = swap;
-			staked.pop();
-			labGame.safeTransferFrom(address(this), _msgSender(), stake.tokenId);
-		} else {
-			staked[_index].timestamp = uint240(block.timestamp);
+			delete scientists[_tokenId];
+			labGame.safeTransferFrom(address(this), _msgSender(), _tokenId);
+		} else if (amount >= MIN_CLAIM) {
+			scientists[_tokenId].value = uint80(block.timestamp);
 		}
 	}
 
 	function _claimMutant(uint256 _tokenId, uint256 _generation, bool _unstake) internal returns (uint256 amount) {
-		Mutant memory stake = mutants[mutantIndices[_tokenId]];
-		require(stake.account == _msgSender(), "Token not owned");
+		require(labGame.ownerOf(_tokenId) == address(this), "Token not staked");
+		Stake memory stake = mutants[ mutantIndices[_tokenId] ];
 		uint256 weight = [3, 4, 5, 8][_generation];
-		amount = serumPerWeight.sub(stake.value).mul(weight);
-
+		amount = serumPerWeight - stake.value * weight;
+		
 		if (_unstake) {
-			totalWeight = totalWeight.sub(weight);
-
-			Mutant memory swap = mutants[mutants.length - 1];
-			mutants[mutantIndices[_tokenId]] = swap;
-			mutantIndices[swap.tokenId] = mutantIndices[_tokenId];
+			totalWeight -= weight;
 			
+			Stake memory swap = mutants[ mutants.length - 1 ];
+			mutants[ mutantIndices[_tokenId] ] = swap;
+			mutantIndices[ swap.tokenId ] = mutantIndices[_tokenId];
 			delete mutantIndices[_tokenId];
 			mutants.pop();
-			
-			labGame.safeTransferFrom(address(this), _msgSender(), _tokenId);
-		} else {
-			mutants[mutantIndices[_tokenId]].value = uint80(serumPerWeight);
+
+			labGame.safeTransferFrom(address(this), _msgSender(), stake.tokenId);
+		} else if (amount > 0) {
+			mutants[ mutantIndices[_tokenId] ].value = uint80(serumPerWeight);
 		}
 	}
+
+	function _selectTaxRate(uint256 _seed) internal view returns (uint256) {
+		if (mutants.length == 0) return 0;
+		ILabGame.Token memory token = labGame.getToken( mutants[_seed % mutants.length].tokenId );
+		return [15, 20, 25, 40][token.data & 3];
+	}
+
 
 	// -- OWNER -- 
 
