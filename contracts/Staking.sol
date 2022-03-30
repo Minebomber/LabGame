@@ -86,6 +86,7 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 	}
 
 	function claimMutants(uint256[] calldata _tokenIds, bool _unstake) external override whenNotPaused nonReentrant {
+		require(mutants.length > 0, "No staked mutants");
 		uint256 amount;
 		for (uint256 i = _tokenIds.length; i > 0; i--) {
 			ILabGame.Token memory token = labGame.getToken(_tokenIds[i]);
@@ -177,6 +178,7 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 	function _claimMutant(uint256 _tokenId, uint256 _generation, bool _unstake) internal returns (uint256 amount) {
 		require(labGame.ownerOf(_tokenId) == address(this), "Token not staked");
 		Stake memory stake = mutants[ mutantIndices[_tokenId] ];
+		require(stake.owner == _msgSender(), "Token not owned");
 		uint256 weight = [3, 4, 5, 8][_generation];
 		amount = serumPerWeight - stake.value * weight;
 		if (_unstake) {
