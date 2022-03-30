@@ -1,110 +1,138 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
+const { ethers, waffle } = require('hardhat');
 
-describe('Generator', function() {
-	before(async function() {
-		this.VRF = await ethers.getContractFactory('TestVRFCoordinatorV2');
-		this.vrf = await this.VRF.deploy();
-		await this.vrf.deployed();
+async function snapshot () {
+  return waffle.provider.send('evm_snapshot', [])
+}
 
-		this.Generator = await ethers.getContractFactory('Generator');
-		[this.owner, this.other] = await ethers.getSigners();
-	});
+async function restore (snapshotId) {
+  return waffle.provider.send('evm_revert', [snapshotId])
+}
 
-	beforeEach(async function() {
-		const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
-		const VRF_KEYHASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
-		const VRF_SUBSCRIPTION_ID = 0;
-		const VRF_GAS_LIMIT = 100_000;
+before(async function() {
+	this.VRF = await ethers.getContractFactory('TestVRFCoordinatorV2');
+	this.vrf = await this.VRF.deploy();
+	await this.vrf.deployed();
 
-		this.generator = await this.Generator.deploy(
-			this.vrf.address,
-			LINK_TOKEN,
-			VRF_SUBSCRIPTION_ID,
-			VRF_KEYHASH,
-			VRF_GAS_LIMIT
-		);
-		await this.generator.deployed();
-	});
-	
-	it('non-owner setPaused revert', async function() {
+	this.Generator = await ethers.getContractFactory('Generator');
+	[this.owner, this.other] = await ethers.getSigners();
+
+	const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
+	const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
+	const SUBSCRIPTION_ID = 0;
+	const REQUEST_CONFIRMATIONS = 3;
+	const CALLBACK_GAS_LIMIT = 100_000;
+
+	this.generator = await this.Generator.deploy(
+		this.vrf.address,
+		LINK_TOKEN,
+		KEY_HASH,
+		SUBSCRIPTION_ID,
+		REQUEST_CONFIRMATIONS,
+		CALLBACK_GAS_LIMIT
+	);
+	await this.generator.deployed();
+});
+
+beforeEach(async function() {
+	this.snapshotId = await snapshot();
+});
+
+afterEach(async function() {
+	await restore(this.snapshotId);
+})
+
+describe('Generator: setPaused', function() {
+	it('non-owner revert', async function() {
 		await expect(
 			this.generator.connect(this.other).setPaused(true)
 		).to.be.reverted;
 	});
 
-	it('owner setPaused success', async function() {
+	it('owner success', async function() {
 		await this.generator.connect(this.owner).setPaused(true);
 		expect(await this.generator.paused()).to.equal(true);
 	});
+});
 
-	it('non-owner setSubscriptionId revert', async function() {
+describe('Generator: setSubscriptionId', function() {
+	it('non-owner revert', async function() {
 		await expect(
 			this.generator.connect(this.other).setSubscriptionId(123)
 		).to.be.reverted;
 	});
 
-	it('owner setSubscriptionId success', async function() {
+	it('owner success', async function() {
 		await this.generator.connect(this.owner).setSubscriptionId(1);
 	});
+});
 
-	it('non-owner setCallbackGasLimit revert', async function() {
+describe('Generator: setCallbackGasLimit', function() {
+	it('non-owner revert', async function() {
 		await expect(
 			this.generator.connect(this.other).setCallbackGasLimit(0)
 		).to.be.reverted;
 	});
 
-	it('owner setCallbackGasLimit success', async function() {
+	it('owner success', async function() {
 		await this.generator.connect(this.owner).setCallbackGasLimit(0);
 	});
-	
-	it('non-owner addController revert', async function() {
+});
+
+describe('Generator: addController', function() {
+	it('non-owner revert', async function() {
 		await expect(
 			this.generator.connect(this.other).addController(this.other.address)
 		).to.be.reverted;
 	});
 
-	it('owner addController success', async function() {
+	it('owner success', async function() {
 		await this.generator.connect(this.owner).addController(this.other.address);
 		expect(
 			await this.generator.hasRole(this.generator.CONTROLLER_ROLE(), this.other.address)
 		).to.equal(true);
 	});
+});
 	
-	it('non-owner removeController revert', async function() {
+describe('Generator: removeController', function() {
+	it('non-owner revert', async function() {
+		await this.generator.connect(this.owner).addController(this.owner.address);
 		await expect(
-			this.generator.connect(this.other).addController(this.other.address)
+			this.generator.connect(this.other).removeController(this.owner.address)
 		).to.be.reverted;
 	});
 
-	it('owner removeController success', async function() {
+	it('owner success', async function() {
 		await this.generator.connect(this.owner).addController(this.other.address);
 		await this.generator.connect(this.owner).removeController(this.other.address);
 		expect(
 			await this.generator.hasRole(this.generator.CONTROLLER_ROLE(), this.other.address)
 		).to.equal(false);
 	});
+});
 
-	it('non-controller requestRandom revert', async function() {
+describe('Generator: requestRandom', function() {
+	it('non-controller revert', async function() {
 		await expect(
 			this.generator.connect(this.other).addController(this.other.address)
 		).to.be.reverted;
 	});
 
-	it('controller requestRandom success', async function() {
+	it('controller success', async function() {
 		await expect(
 			this.generator.connect(this.other).addController(this.other.address)
 		).to.be.reverted;
 	});
-	it('paused requestRandom revert', async function() {
+
+	it('paused revert', async function() {
 		await expect(
 			this.generator.connect(this.other).addController(this.other.address)
 		).to.be.reverted;
 	});
-	it('non-paused requestRandom success', async function() {
+
+	it('non-paused success', async function() {
 		await expect(
 			this.generator.connect(this.other).addController(this.other.address)
 		).to.be.reverted;
 	});
 });
-	
