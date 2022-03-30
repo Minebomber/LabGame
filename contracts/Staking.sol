@@ -158,7 +158,8 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 		Stake memory stake = scientists[_tokenId];
 		require(stake.owner == _msgSender(), "Token not owned");
 		if (_generation < 3) {
-			amount = (block.timestamp - stake.value) * [GEN0_RATE, GEN1_RATE, GEN2_RATE][_generation] / 1 days;
+			//amount = (block.timestamp - stake.value) * [GEN0_RATE, GEN1_RATE, GEN2_RATE][_generation] / 1 days;
+			amount = (block.timestamp - stake.value) * [GEN0_RATE, GEN1_RATE, GEN2_RATE][_generation] / 1 minutes;
 		} else {
 			// TODO: Mint blueprint: call IBlueprint with amount to use generator for random rarity
 		}
@@ -166,7 +167,7 @@ contract Staking is IStaking, IERC721Receiver, Ownable, Pausable, ReentrancyGuar
 			delete scientists[_tokenId];
 	 		_accountRemoveTokenId(_msgSender(), _tokenId);
 			labGame.safeTransferFrom(address(this), _msgSender(), _tokenId);
-		} else if (amount >= MIN_CLAIM) {
+		} else if (amount >= MIN_CLAIM || _generation == 3) {
 			scientists[_tokenId].value = uint80(block.timestamp);
 		}
 

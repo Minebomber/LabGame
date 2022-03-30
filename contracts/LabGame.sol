@@ -35,18 +35,14 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	mapping(uint256 => Token) tokens;
 	mapping(uint256 => uint256) hashes;
 
-	struct MintRequest {
-		address sender;
-		uint64 tokenId;
-		uint32 amount;
-	}
-	mapping(uint256 => MintRequest) mintRequests;
+	mapping(uint256 => address) mintRequests;
 
 	struct PendingMint {
-		uint256 tokenId;
-		uint256 random;
+		uint224 base;
+		uint32 count;
+		uint256[] random;
 	}
-	mapping(address => PendingMint[]) pendingMints;
+	mapping(address => PendingMint) pendingMints;
 
 	uint256 totalPending;
 
@@ -58,9 +54,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
 
-	event Requested(address indexed _sender, uint256 _tokenId, uint256 _amount);
-	event Pending(address indexed _receiver, uint256 _tokenId);
-	event Revealed(address indexed _receiver, uint256 _tokenId);
+	event Requested(address indexed _account, uint256 _tokenId, uint256 _amount);
+	event Pending(address indexed _account, uint256 _tokenId, uint256 _amount);
+	event Revealed(address indexed _account, uint256 _tokenId);
 
 	constructor(
 		string memory _name,
@@ -86,6 +82,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		require(tx.origin == _msgSender());
 		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
 		if (whitelisted) require(isWhitelisted(_msgSender()), "Not whitelisted");
+		require(pendingMints[_msgSender()].base == 0, "Account has pending mint");
 		
 		uint256 id = totalSupply();
 		uint256 max = id + _amount;
@@ -104,38 +101,40 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		}
 
 		uint256 requestId = generator.requestRandom(_amount);
-		mintRequests[requestId] = MintRequest(_msgSender(), uint64(id + 1), uint32(_amount));
+		mintRequests[requestId] = _msgSender();
+
+		pendingMints[_msgSender()].base = uint224(id + 1);
+		pendingMints[_msgSender()].count = uint32(_amount);
+		
 		totalPending += _amount;
 		emit Requested(_msgSender(), id + 1, _amount);
 	}
 	
 	function fulfillRandom(uint256 _requestId, uint256[] memory _randomWords) external override {
 		require(_msgSender() == address(generator), "Not authorized");
-		MintRequest memory request = mintRequests[_requestId];
-		address recipient;
-		for (uint256 i; i < request.amount; i++) {
-			recipient = _selectRecipient(request.tokenId + i, _randomWords[i] >> 160);
-			if (recipient == address(0)) recipient = request.sender;
-			pendingMints[recipient].push(PendingMint(
-				request.tokenId + i,
-				_randomWords[i]
-			));
-			emit Pending(request.sender, request.tokenId + i);
-		}
+		address account = mintRequests[_requestId];
+		pendingMints[account].random = _randomWords;
+		emit Pending(account, pendingMints[account].base, pendingMints[account].count);
 		delete mintRequests[_requestId];
 	}
 
 	function reveal() external whenNotPaused {
-		uint256 count = pendingMints[_msgSender()].length;
-		require(count > 0, "No pending mints");
-		for (uint256 i; i < pendingMints[_msgSender()].length; i++) {
-			PendingMint memory pending = pendingMints[_msgSender()][i];
-			_generate(pending.tokenId, pending.random);
-			_safeMint(_msgSender(), pending.tokenId);
-			emit Revealed(_msgSender(), pending.tokenId);
-		}
-		totalPending -= count;
+		require(pendingMints[_msgSender()].base > 0, "No pending mint");
+		PendingMint memory pending = pendingMints[_msgSender()];
 		delete pendingMints[_msgSender()];
+
+		address recipient;
+		for (uint256 i; i < pending.count; i++) {
+			if (pending.base + i > GEN0_MAX)
+				recipient = staking.selectRandomOwner(pending.random[i] >> 160);
+			if (recipient == address(0)) recipient = _msgSender();
+
+			_generate(pending.base + i, pending.random[i]);
+			_safeMint(recipient, pending.base + i);
+			emit Revealed(recipient, pending.base + i);
+		}
+
+		totalPending -= pending.count;
 	}
 
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
@@ -162,21 +161,19 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		return whitelist[_account];
 	}
 
-	function pendingCount(address _account) external view returns (uint256) {
-		return pendingMints[_account].length;
+	function pendingOf(address _account) external view returns (uint256, uint256) {
+		return (pendingMints[_account].base, pendingMints[_account].count);
 	}
 
-	function pendingOfOwnerByIndex(address _account, uint256 _index) external view returns (uint256) {
-		require(_index < pendingMints[_account].length, "Invalid index");
-		return pendingMints[_account][_index].tokenId;
-	}
-	
 	// -- INTERNAL --
 
 	function _generate(uint256 _tokenId, uint256 _seed) internal {
-		uint256[4] memory GEN_MAX = [ GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX ];
 		uint256 generation;
-		for (; generation < 4 && _tokenId <= GEN_MAX[generation]; generation++) {}
+		if (_tokenId <= GEN0_MAX) {}
+		else if (_tokenId <= GEN1_MAX) generation = 1;
+		else if (_tokenId <= GEN2_MAX) generation = 2;
+		else if (_tokenId <= GEN3_MAX) generation = 3;
+
 		Token memory token = _selectTraits(_seed, generation);
 		uint256 hashed = _hashToken(token);
 		while (hashes[hashed] != 0) {
@@ -190,9 +187,8 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 
 	function _selectTraits(uint256 _seed, uint256 _generation) internal view returns (Token memory token) {
 		token.data = uint8(_generation);
-		bool mutant = ((_seed & 0xFFFF) % 10) == 0; 
-		token.data |= mutant ? 128 : 0;
-		(uint256 start, uint256 count) = mutant ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
+		token.data |= (((_seed & 0xFFFF) % 10) == 0) ? 128 : 0;
+		(uint256 start, uint256 count) = ((token.data & 128) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		for (uint256 i; i < count; i++) {
 			_seed >>= 16;
 			token.trait[i] = _selectTrait(_seed & 0xFFFF, start + i);
@@ -211,11 +207,6 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 			_token.data,
 			_token.trait
 		)));
-	}
-
-	function _selectRecipient(uint256 _tokenId, uint256 _seed) internal view returns (address) {
-		if (_tokenId <= GEN0_MAX) return address(0);
-		return staking.selectRandomOwner(_seed);
 	}
 
 	// -- OWNER --
