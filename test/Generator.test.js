@@ -1,21 +1,13 @@
 const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
-
-async function snapshot () {
-  return waffle.provider.send('evm_snapshot', [])
-}
-
-async function restore (snapshotId) {
-  return waffle.provider.send('evm_revert', [snapshotId])
-}
+const { ethers } = require('hardhat');
+const { snapshot, restore } = require('./util');
 
 before(async function() {
-	this.VRF = await ethers.getContractFactory('TestVRFCoordinatorV2');
-	this.vrf = await this.VRF.deploy();
+	const VRF = await ethers.getContractFactory('TestVRFCoordinatorV2');
+	this.vrf = await VRF.deploy();
 	await this.vrf.deployed();
 
-	this.Generator = await ethers.getContractFactory('Generator');
-	[this.owner, this.other] = await ethers.getSigners();
+	const Generator = await ethers.getContractFactory('Generator');
 
 	const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
 	const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
@@ -23,7 +15,7 @@ before(async function() {
 	const REQUEST_CONFIRMATIONS = 3;
 	const CALLBACK_GAS_LIMIT = 100_000;
 
-	this.generator = await this.Generator.deploy(
+	this.generator = await Generator.deploy(
 		this.vrf.address,
 		LINK_TOKEN,
 		KEY_HASH,
@@ -32,6 +24,8 @@ before(async function() {
 		CALLBACK_GAS_LIMIT
 	);
 	await this.generator.deployed();
+
+	[this.owner, this.other] = await ethers.getSigners();
 });
 
 beforeEach(async function() {
@@ -40,7 +34,7 @@ beforeEach(async function() {
 
 afterEach(async function() {
 	await restore(this.snapshotId);
-})
+});
 
 describe('Generator: setPaused', function() {
 	it('non-owner revert', async function() {
