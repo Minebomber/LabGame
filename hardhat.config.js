@@ -9,4 +9,9 @@ module.exports = {
 		},
 	},
 	defaultNetwork: "localhost",
+	networks: {
+		hardhat: {
+			loggingEnabled: true,
+		},
+	}
 };
