@@ -18,6 +18,7 @@ const deploy = async (name, ...args) => {
 const message = {
 	accessControlMissingRole: /AccessControl: account .* is missing role .*/,
 	ownableNotOwner: 'Ownable: caller is not the owner',
+	pausablePaused: 'Pausable: paused',
 };
 
 Object.assign(exports, {

@@ -78,26 +78,24 @@ describe('Generator: constructor', function() {
 describe('Generator: requestRandom', function() {
 	it('non-controller revert', async function() {
 		await expect(
-			this.generator.connect(this.other).addController(this.other.address)
+			this.generator.connect(this.other).requestRandom(1)
 		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 
 	it('controller success', async function() {
-		await expect(
-			this.generator.connect(this.other).addController(this.other.address)
-		).to.be.revertedWith(message.accessControlMissingRole);
+		await this.generator.connect(this.owner).addController(this.other.address);
+		expect(
+			await this.generator.connect(this.other).callStatic.requestRandom(1)
+		).to.equal(0);
 	});
 
 	it('paused revert', async function() {
-		await expect(
-			this.generator.connect(this.other).addController(this.other.address)
-		).to.be.revertedWith(message.accessControlMissingRole);
-	});
+		await this.generator.connect(this.owner).addController(this.other.address);
+		await this.generator.connect(this.owner).setPaused(true);
 
-	it('non-paused success', async function() {
 		await expect(
-			this.generator.connect(this.other).addController(this.other.address)
-		).to.be.revertedWith(message.accessControlMissingRole);
+			this.generator.connect(this.other).requestRandom(1)
+		).to.be.revertedWith(message.pausablePaused);
 	});
 });
 
