@@ -1,21 +1,17 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { snapshot, restore } = require('./util');
+const { snapshot, restore, deploy, message } = require('./util');
 
 before(async function() {
-	const VRF = await ethers.getContractFactory('TestVRFCoordinatorV2');
-	this.vrf = await VRF.deploy();
-	await this.vrf.deployed();
-
-	const Generator = await ethers.getContractFactory('Generator');
-
 	const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
 	const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
 	const SUBSCRIPTION_ID = 0;
 	const REQUEST_CONFIRMATIONS = 3;
 	const CALLBACK_GAS_LIMIT = 100_000;
 
-	this.generator = await Generator.deploy(
+	this.vrf = await deploy('TestVRFCoordinatorV2');
+	this.generator = await deploy(
+		'Generator',
 		this.vrf.address,
 		LINK_TOKEN,
 		KEY_HASH,
@@ -23,7 +19,6 @@ before(async function() {
 		REQUEST_CONFIRMATIONS,
 		CALLBACK_GAS_LIMIT
 	);
-	await this.generator.deployed();
 
 	[this.owner, this.other] = await ethers.getSigners();
 });
@@ -36,24 +31,50 @@ afterEach(async function() {
 	await restore(this.snapshotId);
 });
 
-describe('Generator: setPaused', function() {
+
+describe('Generator: requestRandom', function() {
+	it('non-controller revert', async function() {
+		await expect(
+			this.generator.connect(this.other).addController(this.other.address)
+		).to.be.revertedWith(message.accessControlMissingRole);
+	});
+
+	it('controller success', async function() {
+		await expect(
+			this.generator.connect(this.other).addController(this.other.address)
+		).to.be.revertedWith(message.accessControlMissingRole);
+	});
+
+	it('paused revert', async function() {
+		await expect(
+			this.generator.connect(this.other).addController(this.other.address)
+		).to.be.revertedWith(message.accessControlMissingRole);
+	});
+
+	it('non-paused success', async function() {
+		await expect(
+			this.generator.connect(this.other).addController(this.other.address)
+		).to.be.revertedWith(message.accessControlMissingRole);
+	});
+});
+
+describe('Generator: setKeyHash', function() {
 	it('non-owner revert', async function() {
 		await expect(
-			this.generator.connect(this.other).setPaused(true)
-		).to.be.reverted;
+			this.generator.connect(this.other).setKeyHash(ethers.utils.formatBytes32String('new key hash'))
+		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 
 	it('owner success', async function() {
-		await this.generator.connect(this.owner).setPaused(true);
-		expect(await this.generator.paused()).to.equal(true);
+		await this.generator.connect(this.owner).setKeyHash(ethers.utils.formatBytes32String('new key hash'));
 	});
 });
 
 describe('Generator: setSubscriptionId', function() {
 	it('non-owner revert', async function() {
 		await expect(
-			this.generator.connect(this.other).setSubscriptionId(123)
-		).to.be.reverted;
+			this.generator.connect(this.other).setSubscriptionId(1)
+		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 
 	it('owner success', async function() {
@@ -61,11 +82,23 @@ describe('Generator: setSubscriptionId', function() {
 	});
 });
 
+describe('Generator: setRequestConfirmations', function() {
+	it('non-owner revert', async function() {
+		await expect(
+			this.generator.connect(this.other).setRequestConfirmations(1)
+		).to.be.revertedWith(message.accessControlMissingRole);
+	});
+
+	it('owner success', async function() {
+		await this.generator.connect(this.owner).setRequestConfirmations(1);
+	});
+});
+
 describe('Generator: setCallbackGasLimit', function() {
 	it('non-owner revert', async function() {
 		await expect(
 			this.generator.connect(this.other).setCallbackGasLimit(0)
-		).to.be.reverted;
+		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 
 	it('owner success', async function() {
@@ -77,7 +110,7 @@ describe('Generator: addController', function() {
 	it('non-owner revert', async function() {
 		await expect(
 			this.generator.connect(this.other).addController(this.other.address)
-		).to.be.reverted;
+		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 
 	it('owner success', async function() {
@@ -93,7 +126,7 @@ describe('Generator: removeController', function() {
 		await this.generator.connect(this.owner).addController(this.owner.address);
 		await expect(
 			this.generator.connect(this.other).removeController(this.owner.address)
-		).to.be.reverted;
+		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 
 	it('owner success', async function() {
@@ -105,28 +138,15 @@ describe('Generator: removeController', function() {
 	});
 });
 
-describe('Generator: requestRandom', function() {
-	it('non-controller revert', async function() {
+describe('Generator: setPaused', function() {
+	it('non-owner revert', async function() {
 		await expect(
-			this.generator.connect(this.other).addController(this.other.address)
-		).to.be.reverted;
+			this.generator.connect(this.other).setPaused(true)
+		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 
-	it('controller success', async function() {
-		await expect(
-			this.generator.connect(this.other).addController(this.other.address)
-		).to.be.reverted;
-	});
-
-	it('paused revert', async function() {
-		await expect(
-			this.generator.connect(this.other).addController(this.other.address)
-		).to.be.reverted;
-	});
-
-	it('non-paused success', async function() {
-		await expect(
-			this.generator.connect(this.other).addController(this.other.address)
-		).to.be.reverted;
+	it('owner success', async function() {
+		await this.generator.connect(this.owner).setPaused(true);
+		expect(await this.generator.paused()).to.equal(true);
 	});
 });

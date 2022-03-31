@@ -15,8 +15,13 @@ const deploy = async (name, ...args) => {
 	return contract;
 };
 
+const message = {
+	accessControlMissingRole: /AccessControl: account .* is missing role .*/,
+};
+
 Object.assign(exports, {
 	snapshot,
 	restore,
 	deploy,
+	message,
 });
