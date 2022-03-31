@@ -16,6 +16,14 @@ afterEach(async function() {
 	await restore(this.snapshotId);
 });
 
+describe('Serum: constructor', function() {
+	it('owner has admin role', async function() {
+		expect(
+			await this.serum.hasRole(this.serum.DEFAULT_ADMIN_ROLE(), this.owner.address)
+		).to.equal(true);
+	});
+});
+
 describe('Serum: addController', function() {
 	it('owner success', async function() {
 		await this.serum.connect(this.owner).addController(this.other.address);

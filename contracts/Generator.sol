@@ -13,12 +13,12 @@ import "./interfaces/IRandomReceiver.sol";
 contract Generator is VRFConsumerBaseV2, AccessControl, Pausable {
 	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 	
-	VRFCoordinatorV2Interface vrfCoordinator;
-	LinkTokenInterface linkToken;
-	bytes32 keyHash;
-	uint64 subscriptionId;
-	uint16 requestConfirmations;
-	uint32 callbackGasLimit;
+	VRFCoordinatorV2Interface public vrfCoordinator;
+	LinkTokenInterface public linkToken;
+	bytes32 public keyHash;
+	uint64 public subscriptionId;
+	uint16 public requestConfirmations;
+	uint32 public callbackGasLimit;
 
 	mapping(uint256 => address) requests;
 

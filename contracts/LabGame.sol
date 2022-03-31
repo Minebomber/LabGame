@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interfaces/ILabGame.sol";
 import "./interfaces/ISerum.sol";
 import "./interfaces/IMetadata.sol";
-import "./interfaces/IStaking.sol";
 import "./interfaces/IGenerator.sol";
 import "./interfaces/IRandomReceiver.sol";
 
@@ -49,7 +48,6 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	IGenerator generator;
 	ISerum serum;
 	IMetadata metadata;
-	IStaking staking;
 
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
@@ -126,11 +124,11 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		address recipient;
 		for (uint256 i; i < pending.count; i++) {
 			if (pending.base + i > GEN0_MAX)
-				recipient = staking.selectRandomOwner(pending.random[i] >> 160);
-			if (recipient == address(0)) recipient = _msgSender();
+				recipient = _selectRandomOwner(pending.random[i] >> 160);
 
 			_generate(pending.base + i, pending.random[i]);
 			_safeMint(recipient, pending.base + i);
+			serum.initializeClaim(pending.base + i);
 			emit Revealed(recipient, pending.base + i);
 		}
 
@@ -152,9 +150,13 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	}
 
 	function transferFrom(address _from, address _to, uint256 _tokenId) public override (ERC721, IERC721) {
-		if (_msgSender() != address(staking))
-			require(_isApprovedOrOwner(_msgSender(), _tokenId), "transfer caller not approved");
-		_transfer(_from, _to, _tokenId);
+		serum.updateClaims(_from);
+		ERC721.transferFrom(_from, _to, _tokenId);
+	}
+
+	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) public override (ERC721, IERC721) {
+		serum.updateClaims(_from);
+		ERC721.safeTransferFrom(_from, _to, _tokenId, _data);
 	}
 
 	function isWhitelisted(address _account) public view returns (bool) {
@@ -209,6 +211,11 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		)));
 	}
 
+	function _selectRandomOwner(uint256 _seed) internal view returns (address) {
+		// TODO: Implement
+		return _msgSender();
+	}
+
 	// -- OWNER --
 
 	function whitelistAdd(address _account) external onlyOwner {
@@ -221,10 +228,6 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 
 	function setWhitelisted(bool _whitelisted) external onlyOwner {
 		whitelisted = _whitelisted;
-	}
-
-	function setStaking(address _staking) external onlyOwner {
-		staking = IStaking(_staking);
 	}
 
 	function setPaused(bool _state) external onlyOwner {
