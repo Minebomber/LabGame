@@ -121,10 +121,11 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		PendingMint memory pending = pendingMints[_msgSender()];
 		delete pendingMints[_msgSender()];
 
-		address recipient;
 		for (uint256 i; i < pending.count; i++) {
+			address recipient;
 			if (pending.base + i > GEN0_MAX)
 				recipient = _selectRandomOwner(pending.random[i] >> 160);
+			if (recipient == address(0)) recipient = _msgSender();
 
 			_generate(pending.base + i, pending.random[i]);
 			_safeMint(recipient, pending.base + i);

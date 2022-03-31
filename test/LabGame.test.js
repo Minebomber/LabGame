@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { snapshot, restore, deploy } = require('./util');
+const { snapshot, restore, deploy, message } = require('./util');
 
 before(async function() {
 	const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
@@ -29,21 +29,11 @@ before(async function() {
 		this.serum.address,
 		this.metadata.address
 	);
-	this.staking = await deploy(
-		'Staking',
-		this.generator.address,
-		this.serum.address,
-		this.labGame.address
-	);
 	
 	await this.generator.addController(this.labGame.address);
-	await this.generator.addController(this.staking.address);
-	
 	await this.serum.addController(this.labGame.address);
-	await this.serum.addController(this.staking.address);
-	
+	await this.serum.setLabGame(this.labGame.address);
 	await this.metadata.setLabGame(this.labGame.address);
-	await this.labGame.setStaking(this.staking.address);
 
 	[this.owner, this.other] = await ethers.getSigners();
 });
@@ -60,7 +50,7 @@ describe('LabGame: setPaused', function() {
 	it('non-owner revert', async function() {
 		await expect(
 			this.labGame.connect(this.other).setPaused(true)
-		).to.be.reverted;
+		).to.be.revertedWith(message.ownableNotOwner);
 	});
 
 	it('owner success', async function() {
@@ -73,7 +63,7 @@ describe('LabGame: whitelistAdd', function() {
 	it('non-owner revert', async function() {
 		await expect(
 			this.labGame.connect(this.other).whitelistAdd(this.other.address)
-		).to.be.reverted;
+		).to.be.revertedWith(message.ownableNotOwner);
 	});
 
 	it('owner success', async function() {
@@ -89,7 +79,7 @@ describe('LabGame: whitelistRemove', function() {
 		await this.labGame.connect(this.owner).whitelistAdd(this.owner.address);
 		await expect(
 			this.labGame.connect(this.other).whitelistRemove(this.owner.address)
-		).to.be.reverted;
+		).to.be.revertedWith(message.ownableNotOwner);
 	});
 
 	it('owner success', async function() {
@@ -103,7 +93,7 @@ describe('LabGame: whitelistRemove', function() {
 	
 describe('LabGame: mint', function() {
 	it('non-whitelisted revert', async function() {
-		await expect(this.labGame.connect(this.other).mint(1, false)).to.be.reverted;
+		await expect(this.labGame.connect(this.other).mint(1)).to.be.revertedWith('Not whitelisted');
 	});
 	
 	it('whitelisted success', async function() {
@@ -124,21 +114,21 @@ describe('LabGame: mint', function() {
 		await this.labGame.connect(this.owner).setWhitelisted(false);
 		await expect(
 			this.labGame.mint(1)
-		).to.be.reverted;
+		).to.be.revertedWith('Not enough ether');
 	});
 
 	it('zero amount revert', async function() {
 		await this.labGame.connect(this.owner).setWhitelisted(false);
 		await expect(
 			this.labGame.mint(0)
-		).to.be.reverted;
+		).to.be.revertedWith('Invalid mint amount');
 	});
 	
 	it('greater than max amount revert', async function() {
 		await this.labGame.connect(this.owner).setWhitelisted(false);
 		await expect(
 			this.labGame.mint(11)
-		).to.be.reverted;
+		).to.be.revertedWith('Invalid mint amount');
 	});
 });
 
@@ -149,7 +139,7 @@ describe('LabGame: reveal', function() {
 		await this.vrf.fulfillRequests();
 		await expect(
 			this.labGame.connect(this.other).reveal()
-		).to.be.reverted;
+		).to.be.revertedWith('No pending mint');
 	});
 
 	it('receiver success', async function() {

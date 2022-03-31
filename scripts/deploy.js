@@ -43,23 +43,13 @@ async function main() {
 		Serum.address,
 		Metadata.address
 	);
-	const Staking = await deployContract(
-		'Staking',
-		Generator.address,
-		Serum.address,
-		LabGame.address
-	);
 
 	await Generator.addController(LabGame.address);
-	await Generator.addController(Staking.address);
-
 	await Serum.addController(LabGame.address);
-	await Serum.addController(Staking.address);
-
-	await LabGame.setStaking(Staking.address);
+	await Serum.setLabGame(LabGame.address);
+	await Metadata.setLabGame(LabGame.address);
 	await LabGame.setWhitelisted(false);
 
-	await Metadata.setLabGame(LabGame.address);
 	for (let i = 0; i < 17; i++) {
 		await Metadata.setTraits(i, [
 			['A', 'iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAABcUlEQVRYw+2Wv0vDUBDHv/dMK6jQBvJKl9qM0k1wU3HWLiJUh9b/yX9CcLIVQXHt5C7SQUqrDtKGOHQplSbnZLn+Gjr4srwPBJK7C3z5vtxdAIslWWhRsOt5dRCdTgXjuOSHYcu0QDUbeM9kXCh1Ml+pakk4OCcwTqXOwZyeq2Su8hLHjQokIunUSCSKn1ofJCqwk8/7APYnpgFXAIZ/z9G0ePMCKYpqsnEcpa7B/DTJM1degXSSR1wV9+1Cr/fCRA0RczdzuXIiAj88bw/AjmiKWwBwRqN7AGMRryUiMCK6nBkrdQAoDAbfIGqKTLmTzWaNCmRgjYALEf8q9vvPwrW6yK0rx6kY3SRdrY8BPKzwUrMYBEfmjnjF8cHAYdt1t40I7Gu9BWa5d2/8IKDZC3FckiYqx6kaETgkOgOwIdxpLCr0w7DFwNuSjfN/AmM5Noh+xlH0uPTbY74TjVPqar1rfwgtFovFYrFYLBaLJUF+AY0tbla3gb1SAAAAAElFTkSuQmCC'],
