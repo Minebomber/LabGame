@@ -61,7 +61,7 @@ async function main() {
 
 	TestVRFCoordinator.on('Requested', async () => {
 		await TestVRFCoordinator.fulfillRequests();
-	})
+	});
 }
 
 main()
