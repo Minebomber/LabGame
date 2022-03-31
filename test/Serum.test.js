@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { snapshot, restore, deploy } = require('./util');
+const { snapshot, restore, deploy, message } = require('./util');
 
 before(async function() {
 	this.serum = await deploy('Serum', 'Serum', 'SERUM');
@@ -35,7 +35,7 @@ describe('Serum: addController', function() {
 	it('non-owner revert', async function() {
 		await expect(
 			this.serum.connect(this.other).addController(this.other.address)
-		).to.be.reverted;
+		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 });
 	
@@ -51,15 +51,15 @@ describe('Serum: removeController', function() {
 	it('non-owner revert', async function() {
 		await expect(
 			this.serum.connect(this.other).addController(this.other.address)
-		).to.be.reverted;
+		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 });
 
 describe('Serum: mint', function() {
 	it('non-controller revert', async function() {
 		await expect(
-			this.serum.mint(this.other, 1000)
-		).to.be.reverted;
+			this.serum.connect(this.other).mint(this.other.address, 1000)
+		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 	
 	it('controller success', async function() {
@@ -74,8 +74,8 @@ describe('Serum: mint', function() {
 describe('Serum: burn', function() {
 	it('non-controller revert', async function() {
 		await expect(
-			this.serum.burn(this.other, 1000)
-		).to.be.reverted;
+			this.serum.connect(this.other).burn(this.other.address, 1000)
+		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 	
 	it('controller success', async function() {
@@ -90,7 +90,7 @@ describe('Serum: setPaused', function() {
 	it('non-owner revert', async function() {
 		await expect(
 			this.serum.connect(this.other).setPaused(true)
-		).to.be.reverted;
+		).to.be.revertedWith(message.accessControlMissingRole);
 	});
 
 	it('owner success', async function() {
