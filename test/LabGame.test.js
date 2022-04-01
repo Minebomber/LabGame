@@ -1,6 +1,6 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
-const { snapshot, restore, deploy, message } = require('./util');
+const { ethers, waffle } = require('hardhat');
+const { snapshot, restore, deploy, message, addressAt, mappingAt } = require('./util');
 
 before(async function() {
 	const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
@@ -46,51 +46,26 @@ afterEach(async function() {
 	await restore(this.snapshotId);
 });
 
-describe('LabGame: setPaused', function() {
-	it('non-owner revert', async function() {
-		await expect(
-			this.labGame.connect(this.other).setPaused(true)
-		).to.be.revertedWith(message.ownableNotOwner);
-	});
-
-	it('owner success', async function() {
-		await this.labGame.connect(this.owner).setPaused(true);
-		expect(await this.labGame.paused()).to.equal(true);
-	});
-});
-
-describe('LabGame: whitelistAdd', function() {
-	it('non-owner revert', async function() {
-		await expect(
-			this.labGame.connect(this.other).whitelistAdd(this.other.address)
-		).to.be.revertedWith(message.ownableNotOwner);
-	});
-
-	it('owner success', async function() {
-		await this.labGame.connect(this.owner).whitelistAdd(this.other.address);
+describe('LabGame: constructor', function() {
+	it('correct generator', async function() {
 		expect(
-			await this.labGame.connect(this.other).isWhitelisted(this.other.address)
-		).to.equal(true);
+			await addressAt(this.labGame.address, 17)
+		).to.equal(this.generator.address);
 	});
-});
 	
-describe('LabGame: whitelistRemove', function() {
-	it('non-owner revert', async function() {
-		await this.labGame.connect(this.owner).whitelistAdd(this.owner.address);
-		await expect(
-			this.labGame.connect(this.other).whitelistRemove(this.owner.address)
-		).to.be.revertedWith(message.ownableNotOwner);
+	it('correct serum', async function() {
+		expect(
+			await addressAt(this.labGame.address, 18)
+		).to.equal(this.serum.address);
 	});
 
-	it('owner success', async function() {
-		await this.labGame.connect(this.owner).whitelistAdd(this.owner.address);
-		await this.labGame.connect(this.owner).whitelistRemove(this.owner.address);
+	it('correct metadata', async function() {
 		expect(
-			await this.labGame.connect(this.other).isWhitelisted(this.owner.address)
-		).to.equal(false);
+			await addressAt(this.labGame.address, 19)
+		).to.equal(this.metadata.address);
 	});
 });
-	
+
 describe('LabGame: mint', function() {
 	it('non-whitelisted revert', async function() {
 		await expect(this.labGame.connect(this.other).mint(1)).to.be.revertedWith('Not whitelisted');
@@ -130,6 +105,14 @@ describe('LabGame: mint', function() {
 			this.labGame.mint(11)
 		).to.be.revertedWith('Invalid mint amount');
 	});
+
+	it('pending data set', async function() {
+		await this.labGame.connect(this.owner).setWhitelisted(false);
+		await this.labGame.connect(this.other).mint(2, { value: ethers.utils.parseEther('0.12') });
+		expect(
+			ethers.BigNumber.from(await mappingAt(this.labGame.address, 15, this.other.address))
+		).to.equal(ethers.BigNumber.from(2).shl(224).or(1));
+	});
 });
 
 describe('LabGame: reveal', function() {
@@ -152,5 +135,50 @@ describe('LabGame: reveal', function() {
 		expect(
 			await this.labGame.tokenOfOwnerByIndex(this.other.address, 0)
 		).to.equal(1);
+	});
+});
+
+describe('LabGame: whitelistAdd', function() {
+	it('non-owner revert', async function() {
+		await expect(
+			this.labGame.connect(this.other).whitelistAdd(this.other.address)
+		).to.be.revertedWith(message.ownableNotOwner);
+	});
+
+	it('owner success', async function() {
+		await this.labGame.connect(this.owner).whitelistAdd(this.other.address);
+		expect(
+			await this.labGame.connect(this.other).isWhitelisted(this.other.address)
+		).to.equal(true);
+	});
+});
+	
+describe('LabGame: whitelistRemove', function() {
+	it('non-owner revert', async function() {
+		await this.labGame.connect(this.owner).whitelistAdd(this.owner.address);
+		await expect(
+			this.labGame.connect(this.other).whitelistRemove(this.owner.address)
+		).to.be.revertedWith(message.ownableNotOwner);
+	});
+
+	it('owner success', async function() {
+		await this.labGame.connect(this.owner).whitelistAdd(this.owner.address);
+		await this.labGame.connect(this.owner).whitelistRemove(this.owner.address);
+		expect(
+			await this.labGame.connect(this.other).isWhitelisted(this.owner.address)
+		).to.equal(false);
+	});
+});
+	
+describe('LabGame: setPaused', function() {
+	it('non-owner revert', async function() {
+		await expect(
+			this.labGame.connect(this.other).setPaused(true)
+		).to.be.revertedWith(message.ownableNotOwner);
+	});
+
+	it('owner success', async function() {
+		await this.labGame.connect(this.owner).setPaused(true);
+		expect(await this.labGame.paused()).to.equal(true);
 	});
 });

@@ -1,3 +1,5 @@
+const { storageLayout } = require("hardhat");
+
 async function deployContract(name, ...args) {
 	const factory = await ethers.getContractFactory(name);
 	console.log(`Deploying ${name}...`);
