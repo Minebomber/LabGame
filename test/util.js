@@ -21,12 +21,13 @@ const message = {
 	pausablePaused: 'Pausable: paused',
 };
 
-const addressAt = async (address, index) => {
-	const data = await waffle.provider.getStorageAt(address, index);
-	return ethers.utils.getAddress((
-		await waffle.provider.getStorageAt(address, index)
-	).substring(26));
+const parseAddress = (address) => {
+	return ethers.utils.getAddress(address.substring(26));
 };
+
+const storageAt = async (address, index) => {
+	return await waffle.provider.getStorageAt(address, index);
+}
 
 const mappingAt = async (address, index, key) => {
 	return await waffle.provider.getStorageAt(address, ethers.utils.keccak256(
@@ -42,6 +43,7 @@ Object.assign(exports, {
 	restore,
 	deploy,
 	message,
-	addressAt,
+	parseAddress,
+	storageAt,
 	mappingAt,
 });

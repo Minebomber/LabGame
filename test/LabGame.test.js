@@ -1,7 +1,20 @@
 const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
-const { snapshot, restore, deploy, message, addressAt, mappingAt } = require('./util');
+const { ethers, waffle, storageLayout } = require('hardhat');
+const {
+	snapshot,
+	restore,
+	deploy,
+	message,
+	parseAddress,
+	storageAt,
+	mappingAt
+} = require('./util');
 
+const pendingMint = (base, count) => {
+	return ethers.BigNumber.from(count).shl(224).or(base);
+};
+
+describe('LabGame', function() {
 before(async function() {
 	const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
 	const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
@@ -49,19 +62,19 @@ afterEach(async function() {
 describe('LabGame: constructor', function() {
 	it('correct generator', async function() {
 		expect(
-			await addressAt(this.labGame.address, 17)
+			parseAddress(await storageAt(this.labGame.address, 17))
 		).to.equal(this.generator.address);
 	});
 	
 	it('correct serum', async function() {
 		expect(
-			await addressAt(this.labGame.address, 18)
+			parseAddress(await storageAt(this.labGame.address, 18))
 		).to.equal(this.serum.address);
 	});
 
 	it('correct metadata', async function() {
 		expect(
-			await addressAt(this.labGame.address, 19)
+			parseAddress(await storageAt(this.labGame.address, 19))
 		).to.equal(this.metadata.address);
 	});
 });
@@ -117,10 +130,13 @@ describe('LabGame: mint', function() {
 		).to.emit(this.labGame, 'Requested');
 		expect(
 			ethers.BigNumber.from(await mappingAt(this.labGame.address, 15, this.other.address))
-		).to.equal(ethers.BigNumber.from(2).shl(224).or(1));
+		).to.equal(pendingMint(1, 2));
 		expect(
 			await this.labGame.totalSupply()
 		).to.equal(2);
+		expect(
+			parseAddress(await mappingAt(this.labGame.address, 14, 0))
+		).to.equal(this.other.address);
 	});
 
 	it('pending mints have correct base tokenId', async function() {
@@ -128,12 +144,12 @@ describe('LabGame: mint', function() {
 		await this.labGame.connect(this.other).mint(2, { value: ethers.utils.parseEther('0.12') });
 		expect(
 			ethers.BigNumber.from(await mappingAt(this.labGame.address, 15, this.other.address))
-		).to.equal(ethers.BigNumber.from(2).shl(224).or(1));
+		).to.equal(pendingMint(1, 2));
 
 		await this.labGame.connect(this.owner).mint(1, { value: ethers.utils.parseEther('0.06') });
 		expect(
 			ethers.BigNumber.from(await mappingAt(this.labGame.address, 15, this.owner.address))
-		).to.equal(ethers.BigNumber.from(1).shl(224).or(3));
+		).to.equal(pendingMint(3, 1));
 	});
 });
 
@@ -203,4 +219,5 @@ describe('LabGame: setPaused', function() {
 		await this.labGame.connect(this.owner).setPaused(true);
 		expect(await this.labGame.paused()).to.equal(true);
 	});
+});
 });

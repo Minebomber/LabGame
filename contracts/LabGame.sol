@@ -118,6 +118,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 
 	function reveal() external whenNotPaused {
 		require(pendingMints[_msgSender()].base > 0, "No pending mint");
+		require(pendingMints[_msgSender()].random.length > 0, "Reveal not ready");
 		PendingMint memory pending = pendingMints[_msgSender()];
 		delete pendingMints[_msgSender()];
 
