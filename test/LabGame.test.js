@@ -108,10 +108,32 @@ describe('LabGame: mint', function() {
 
 	it('pending data set', async function() {
 		await this.labGame.connect(this.owner).setWhitelisted(false);
+
+		expect(
+			await this.labGame.totalSupply()
+		).to.equal(0);
+		await expect(
+			this.labGame.connect(this.other).mint(2, { value: ethers.utils.parseEther('0.12') })
+		).to.emit(this.labGame, 'Requested');
+		expect(
+			ethers.BigNumber.from(await mappingAt(this.labGame.address, 15, this.other.address))
+		).to.equal(ethers.BigNumber.from(2).shl(224).or(1));
+		expect(
+			await this.labGame.totalSupply()
+		).to.equal(2);
+	});
+
+	it('pending mints have correct base tokenId', async function() {
+		await this.labGame.connect(this.owner).setWhitelisted(false);
 		await this.labGame.connect(this.other).mint(2, { value: ethers.utils.parseEther('0.12') });
 		expect(
 			ethers.BigNumber.from(await mappingAt(this.labGame.address, 15, this.other.address))
 		).to.equal(ethers.BigNumber.from(2).shl(224).or(1));
+
+		await this.labGame.connect(this.owner).mint(1, { value: ethers.utils.parseEther('0.06') });
+		expect(
+			ethers.BigNumber.from(await mappingAt(this.labGame.address, 15, this.owner.address))
+		).to.equal(ethers.BigNumber.from(1).shl(224).or(3));
 	});
 });
 

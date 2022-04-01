@@ -21,14 +21,14 @@ before(async function() {
 	);
 
 	this.serum = await deploy('Serum', 'Serum', 'SERUM');
-
+	this.metadata = await deploy('Metadata');
 	this.labGame = await deploy(
 		'LabGame',
 		'LabGame',
 		'LABGAME',
 		this.generator.address,
 		this.serum.address,
-		ethers.constants.AddressZero
+		this.metadata.address
 	);
 	
 	await this.generator.addController(this.labGame.address);
