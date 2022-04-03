@@ -1,6 +1,14 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { snapshot, restore, deploy, message, addressAt } = require('./util');
+const {
+	snapshot,
+	restore,
+	deploy,
+	message,
+	parseAddress,
+	storageAt,
+	mappingAt
+} = require('./util');
 
 before(async function() {
 	const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
@@ -130,7 +138,7 @@ describe('Serum: setLabGame', function() {
 	it('owner success', async function() {
 		await this.serum.connect(this.owner).setLabGame(this.other.address);
 		expect(
-			await addressAt(this.serum.address, 17)
+			parseAddress(await storageAt(this.serum.address, 17))
 		).to.equal(this.other.address);
 	});
 

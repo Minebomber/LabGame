@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
+import "./interfaces/ISerum.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./interfaces/ISerum.sol";
+
 import "./LabGame.sol";
 
 contract Serum is ISerum, ERC20, AccessControl, Pausable {
 	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 	
-	uint256 constant GEN0_DAILY = 1000 ether;
-	uint256 constant GEN1_DAILY = 1200 ether;
-	uint256 constant GEN2_DAILY = 1500 ether;
+	uint256 constant GEN0_RATE = 1000 ether;
+	uint256 constant GEN1_RATE = 1200 ether;
+	uint256 constant GEN3_RATE = 1500 ether;
 
 	uint256 constant GEN0_TAX = 100; // 10.0%
 	uint256 constant GEN1_TAX = 125; // 12.5%
@@ -28,6 +29,8 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 
 	LabGame labGame;
 
+	event Claimed(address indexed _account, uint256 _amount);
+
 	/**
 	 * Token constructor, sets owner permission
 	 * @param _name ERC20 token name
@@ -40,23 +43,27 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 	// -- EXTERNAL --
 
 	function claim() external override {
-		uint256 amount;
-		uint256 untaxed;
 		uint256 count = labGame.balanceOf(_msgSender());
+		uint256 amount;
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
 			ILabGame.Token memory token = labGame.getToken(tokenId);
 			if ((token.data & 128) == 0)
-				untaxed += _claimScientist(tokenId, token.data & 3);
-			else 
+				amount += _claimScientist(tokenId, token.data & 3);
+		}
+		amount = _payTax(amount);
+
+		for (uint256 i; i < count; i++) {
+			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
+			ILabGame.Token memory token = labGame.getToken(tokenId);
+			if ((token.data & 128) != 0)
 				amount += _claimMutant(tokenId, token.data & 3);
 		}
-
-		amount += _payTax(untaxed);
 
 		uint256 pending = pendingClaims[_msgSender()];
 		delete pendingClaims[_msgSender()];
 		_mint(_msgSender(), amount + pending);
+		emit Claimed(_msgSender(), amount + pending);
 	}
 
 	function pendingClaim(address _account) external view override returns (uint256 amount) {
@@ -66,7 +73,10 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_account, i);
 			ILabGame.Token memory token = labGame.getToken(tokenId);
 			if ((token.data & 128) == 0) {
-				untaxed += tokenClaims[tokenId] * [ GEN0_DAILY, GEN1_DAILY, GEN2_DAILY, 0 ][token.data & 3];
+				untaxed +=
+					(block.timestamp - tokenClaims[tokenId]) * 
+					[ GEN0_RATE, GEN1_RATE, GEN3_RATE, 0 ][token.data & 3] / 
+					1 days;
 			} else {
 				amount += mutantEarnings[token.data & 3] - tokenClaims[tokenId];
 			}
@@ -79,7 +89,10 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 
 	function _claimScientist(uint256 _tokenId, uint256 _generation) internal returns (uint256 amount) {
 		if (_generation < 3) {
-			amount = (block.timestamp - tokenClaims[_tokenId]) * [ GEN0_DAILY, GEN1_DAILY, GEN2_DAILY ][_generation];
+			amount =
+				(block.timestamp - tokenClaims[_tokenId]) *
+				[ GEN0_RATE, GEN1_RATE, GEN3_RATE ][_generation] /
+				1 days;
 		} else {
 			// Mint blueprint
 		}
