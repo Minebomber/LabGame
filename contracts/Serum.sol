@@ -20,12 +20,12 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 	uint256 constant GEN2_TAX = 150; // 12.5%
 	uint256 constant GEN3_TAX = 200; // 12.5%
 
-	mapping(uint256 => uint256) public tokenClaims; // tokenId => value
+	mapping(uint256 => uint256) tokenClaims; // tokenId => value
 
-	uint256[4] public mutantEarnings;
-	uint256[4] public mutantCounts;
+	uint256[4] mutantEarnings;
+	uint256[4] mutantCounts;
 
-	mapping(address => uint256) public pendingClaims; 
+	mapping(address => uint256) pendingClaims; 
 
 	LabGame labGame;
 
@@ -44,6 +44,7 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 
 	function claim() external override {
 		uint256 count = labGame.balanceOf(_msgSender());
+		require(count > 0, "No owned tokens");
 		uint256 amount;
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);

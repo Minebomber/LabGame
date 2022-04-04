@@ -18,10 +18,14 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	uint256 constant GEN2_PRICE = 10_000 ether;
 	uint256 constant GEN3_PRICE = 50_000 ether;
 	
-	uint256 constant GEN0_MAX =  5_000;
-	uint256 constant GEN1_MAX =  7_500;
-	uint256 constant GEN2_MAX =  8_750;
-	uint256 constant GEN3_MAX = 10_000;
+	// uint256 constant GEN0_MAX =  5_000;
+	// uint256 constant GEN1_MAX =  7_500;
+	// uint256 constant GEN2_MAX =  8_750;
+	// uint256 constant GEN3_MAX = 10_000;
+	uint256 constant GEN0_MAX = 4;
+	uint256 constant GEN1_MAX = 6;
+	uint256 constant GEN2_MAX = 8;
+	uint256 constant GEN3_MAX = 10;
 
 	uint256 constant MINT_LIMIT = 4;
 
@@ -43,7 +47,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	}
 	mapping(address => PendingMint) pendingMints;
 
-	uint256 totalPending;
+	uint256 tokenOffset;
+
+	uint256[] mutants;
 
 	IGenerator generator;
 	ISerum serum;
@@ -76,7 +82,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 
 	// -- EXTERNAL --
 
-	function mint(uint256 _amount) external payable whenNotPaused {
+	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused {
 		require(tx.origin == _msgSender());
 		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
 		if (whitelisted) require(isWhitelisted(_msgSender()), "Not whitelisted");
@@ -93,7 +99,17 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 			if (id < GEN_MAX[i]) {
 				require(max <= GEN_MAX[i], "Generation limit");
 				if (i == 0) require(msg.value >= _amount * GEN_PRICE[i], "Not enough ether");
-				else serum.burn(_msgSender(), _amount * GEN_PRICE[i]);
+				else {
+					if (i < 3) {
+						require(_burnIds.length == _amount, "Invalid tokens");
+						for (uint256 j; j < _burnIds.length; j++) {
+							require(ownerOf(_burnIds[j]) == _msgSender(), "Burn not owned");
+							_burn(_burnIds[j]);
+						}
+						tokenOffset += _burnIds.length;
+					}
+					serum.burn(_msgSender(), _amount * GEN_PRICE[i]);
+				}
 				break;
 			}
 		}
@@ -104,7 +120,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		pendingMints[_msgSender()].base = uint224(id + 1);
 		pendingMints[_msgSender()].count = uint32(_amount);
 		
-		totalPending += _amount;
+		tokenOffset += _amount;
 		emit Requested(_msgSender(), id + 1, _amount);
 	}
 	
@@ -134,7 +150,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 			emit Revealed(recipient, pending.base + i);
 		}
 
-		totalPending -= pending.count;
+		tokenOffset -= pending.count;
 	}
 
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
@@ -143,7 +159,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	}
 
 	function totalSupply() public view override returns (uint256) {
-		return ERC721Enumerable.totalSupply() + totalPending;
+		return ERC721Enumerable.totalSupply() + tokenOffset;
 	}
 
 	function getToken(uint256 _tokenId) external view override returns (Token memory) {
@@ -214,8 +230,12 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	}
 
 	function _selectRandomOwner(uint256 _seed) internal view returns (address) {
-		// TODO: Implement
-		return _msgSender();
+		if (mutants.length == 0) return address(0);
+		uint256 mutantId = mutants[ (_seed & 0xFFFFFFFF) % mutants.length];
+		uint256 generation = tokens[mutantId].data & 3;
+		if ( ((_seed >> 32) % 1000) < ([100, 125, 150, 175][generation]) )
+			return ownerOf(mutantId);
+		return address(0);
 	}
 
 	// -- OWNER --

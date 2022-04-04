@@ -14,15 +14,15 @@ const pendingMint = (base, count) => {
 	return ethers.BigNumber.from(count).shl(224).or(base);
 };
 
+const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
+const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
+const SUBSCRIPTION_ID = 0;
+const REQUEST_CONFIRMATIONS = 3;
+const CALLBACK_GAS_LIMIT = 100_000;
+
 describe('LabGame', function () {
 
 	before(async function () {
-		const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
-		const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
-		const SUBSCRIPTION_ID = 0;
-		const REQUEST_CONFIRMATIONS = 3;
-		const CALLBACK_GAS_LIMIT = 100_000;
-
 		this.vrf = await deploy('TestVRFCoordinatorV2');
 		this.generator = await deploy(
 			'Generator',
@@ -60,63 +60,63 @@ describe('LabGame', function () {
 		await restore(this.snapshotId);
 	});
 
-	describe('LabGame: constructor', function () {
+	describe('constructor', function () {
 		it('correct generator', async function () {
 			expect(
-				parseAddress(await storageAt(this.labGame.address, 17))
+				parseAddress(await storageAt(this.labGame.address, 18))
 			).to.equal(this.generator.address);
 		});
 
 		it('correct serum', async function () {
 			expect(
-				parseAddress(await storageAt(this.labGame.address, 18))
+				parseAddress(await storageAt(this.labGame.address, 19))
 			).to.equal(this.serum.address);
 		});
 
 		it('correct metadata', async function () {
 			expect(
-				parseAddress(await storageAt(this.labGame.address, 19))
+				parseAddress(await storageAt(this.labGame.address, 20))
 			).to.equal(this.metadata.address);
 		});
 	});
 
-	describe('LabGame: mint', function () {
+	describe('mint', function () {
 		it('non-whitelisted revert', async function () {
-			await expect(this.labGame.connect(this.other).mint(1)).to.be.revertedWith('Not whitelisted');
+			await expect(this.labGame.connect(this.other).mint(1, [])).to.be.revertedWith('Not whitelisted');
 		});
 
 		it('whitelisted success', async function () {
 			await this.labGame.connect(this.owner).whitelistAdd(this.other.address);
 			await expect(
-				this.labGame.connect(this.other).mint(1, { value: ethers.utils.parseEther('0.06') })
+				this.labGame.connect(this.other).mint(1, [], { value: ethers.utils.parseEther('0.06') })
 			).to.emit(this.labGame, 'Requested');
 		});
 
 		it('whitelist disabled success', async function () {
 			await this.labGame.connect(this.owner).setWhitelisted(false);
 			await expect(
-				this.labGame.connect(this.other).mint(1, { value: ethers.utils.parseEther('0.06') })
+				this.labGame.connect(this.other).mint(1, [], { value: ethers.utils.parseEther('0.06') })
 			).to.emit(this.labGame, 'Requested');
 		});
 
 		it('no payment revert', async function () {
 			await this.labGame.connect(this.owner).setWhitelisted(false);
 			await expect(
-				this.labGame.mint(1)
+				this.labGame.mint(1, [])
 			).to.be.revertedWith('Not enough ether');
 		});
 
 		it('zero amount revert', async function () {
 			await this.labGame.connect(this.owner).setWhitelisted(false);
 			await expect(
-				this.labGame.mint(0)
+				this.labGame.mint(0, [])
 			).to.be.revertedWith('Invalid mint amount');
 		});
 
 		it('greater than max amount revert', async function () {
 			await this.labGame.connect(this.owner).setWhitelisted(false);
 			await expect(
-				this.labGame.mint(11)
+				this.labGame.mint(11, [])
 			).to.be.revertedWith('Invalid mint amount');
 		});
 
@@ -127,7 +127,7 @@ describe('LabGame', function () {
 				await this.labGame.totalSupply()
 			).to.equal(0);
 			await expect(
-				this.labGame.connect(this.other).mint(2, { value: ethers.utils.parseEther('0.12') })
+				this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') })
 			).to.emit(this.labGame, 'Requested');
 			expect(
 				ethers.BigNumber.from(await mappingAt(this.labGame.address, 15, this.other.address))
@@ -142,22 +142,22 @@ describe('LabGame', function () {
 
 		it('pending mints have correct base tokenId', async function () {
 			await this.labGame.connect(this.owner).setWhitelisted(false);
-			await this.labGame.connect(this.other).mint(2, { value: ethers.utils.parseEther('0.12') });
+			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			expect(
 				ethers.BigNumber.from(await mappingAt(this.labGame.address, 15, this.other.address))
 			).to.equal(pendingMint(1, 2));
 
-			await this.labGame.connect(this.owner).mint(1, { value: ethers.utils.parseEther('0.06') });
+			await this.labGame.connect(this.owner).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			expect(
 				ethers.BigNumber.from(await mappingAt(this.labGame.address, 15, this.owner.address))
 			).to.equal(pendingMint(3, 1));
 		});
 	});
 
-	describe('LabGame: reveal', function () {
+	describe('reveal', function () {
 		it('non-receiver revert', async function () {
 			await this.labGame.connect(this.owner).setWhitelisted(false);
-			await this.labGame.connect(this.owner).mint(1, { value: ethers.utils.parseEther('0.06') });
+			await this.labGame.connect(this.owner).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
 			await expect(
 				this.labGame.connect(this.other).reveal()
@@ -169,7 +169,7 @@ describe('LabGame', function () {
 			expect(
 				await this.labGame.totalSupply()
 			).to.equal(0);
-			await this.labGame.connect(this.other).mint(1, { value: ethers.utils.parseEther('0.06') });
+			await this.labGame.connect(this.other).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			expect(
 				await this.labGame.totalSupply()
 			).to.equal(1);
@@ -183,14 +183,21 @@ describe('LabGame', function () {
 			expect(
 				await this.labGame.totalSupply()
 			).to.equal(1);
-
 			expect(
 				ethers.BigNumber.from(await mappingAt(this.serum.address, 7, 1))
 			).to.not.equal(0);
 		});
 	});
+	
+	describe('transferFrom', function () {
 
-	describe('LabGame: whitelistAdd', function () {
+	});
+
+	describe('safeTransferFrom', function () {
+
+	});
+
+	describe('whitelistAdd', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.labGame.connect(this.other).whitelistAdd(this.other.address)
@@ -205,7 +212,7 @@ describe('LabGame', function () {
 		});
 	});
 
-	describe('LabGame: whitelistRemove', function () {
+	describe('whitelistRemove', function () {
 		it('non-owner revert', async function () {
 			await this.labGame.connect(this.owner).whitelistAdd(this.owner.address);
 			await expect(
@@ -222,7 +229,7 @@ describe('LabGame', function () {
 		});
 	});
 
-	describe('LabGame: setPaused', function () {
+	describe('setPaused', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.labGame.connect(this.other).setPaused(true)
