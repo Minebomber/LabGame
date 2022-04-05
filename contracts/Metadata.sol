@@ -4,10 +4,9 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
-import "./interfaces/IMetadata.sol";
-import "./interfaces/ILabGame.sol";
+import "./LabGame.sol";
 
-contract Metadata is IMetadata, Ownable {
+contract Metadata is Ownable {
 	using Strings for uint256;
 	using Base64 for bytes;
 
@@ -26,7 +25,7 @@ contract Metadata is IMetadata, Ownable {
 	}
 	mapping(uint256 => mapping(uint256 => Trait)) traits;
 
-	ILabGame labGame;
+	LabGame labGame;
 
 	constructor() {}
 
@@ -37,8 +36,8 @@ contract Metadata is IMetadata, Ownable {
 	 * @param _tokenId token id
 	 * @return token metadata as a base64 json uri
 	 */
-	function tokenURI(uint256 _tokenId) external view override returns (string memory) {
-		ILabGame.Token memory token = labGame.getToken(_tokenId);
+	function tokenURI(uint256 _tokenId) external view returns (string memory) {
+		LabGame.Token memory token = labGame.getToken(_tokenId);
 		return string(abi.encodePacked(
 			'data:application/json;base64,',
 			abi.encodePacked(
@@ -58,7 +57,7 @@ contract Metadata is IMetadata, Ownable {
 	 * @param _token token data
 	 * @return SVG image string for the token
 	 */
-	function _image(ILabGame.Token memory _token) internal view returns (bytes memory) {
+	function _image(LabGame.Token memory _token) internal view returns (bytes memory) {
 		(uint256 start, uint256 count) = ((_token.data & 128) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		bytes memory images;
 		for (uint256 i; i < count; i++) {
@@ -81,7 +80,7 @@ contract Metadata is IMetadata, Ownable {
 	 * @param _token token data
 	 * @return JSON string of token attributes
 	 */
-	function _attributes(ILabGame.Token memory _token) internal view returns (bytes memory) {
+	function _attributes(LabGame.Token memory _token) internal view returns (bytes memory) {
 		string[MAX_TRAITS] memory TRAIT_NAMES = [
 			"Background",
 			"Scientist Type",
@@ -140,6 +139,6 @@ contract Metadata is IMetadata, Ownable {
 	 */
 	function setLabGame(address _labGame) external onlyOwner {
 		require(_labGame != address(0), "Address cannot be 0");
-		labGame = ILabGame(_labGame);
+		labGame = LabGame(_labGame);
 	}
 }

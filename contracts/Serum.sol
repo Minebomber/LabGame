@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "./interfaces/ISerum.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "./LabGame.sol";
+import "./Blueprint.sol";
 
-contract Serum is ISerum, ERC20, AccessControl, Pausable {
+contract Serum is ERC20, AccessControl, Pausable {
 	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 	
 	uint256 constant GEN0_RATE = 1000 ether;
@@ -28,6 +28,7 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 	mapping(address => uint256) pendingClaims; 
 
 	LabGame labGame;
+	Blueprint blueprint;
 
 	event Claimed(address indexed _account, uint256 _amount);
 
@@ -42,21 +43,27 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 
 	// -- EXTERNAL --
 
-	function claim() external override {
+	function claim() external {
 		uint256 count = labGame.balanceOf(_msgSender());
 		require(count > 0, "No owned tokens");
 		uint256 amount;
+		uint256 blueprints;
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
-			ILabGame.Token memory token = labGame.getToken(tokenId);
-			if ((token.data & 128) == 0)
-				amount += _claimScientist(tokenId, token.data & 3);
+			LabGame.Token memory token = labGame.getToken(tokenId);
+			if ((token.data & 128) == 0) {
+				uint256 current = _claimScientist(tokenId, token.data & 3);
+				if (token.data & 3 < 3)
+					amount += current;
+				else
+					blueprints += current;
+			}
 		}
 		amount = _payTax(amount);
 
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
-			ILabGame.Token memory token = labGame.getToken(tokenId);
+			LabGame.Token memory token = labGame.getToken(tokenId);
 			if ((token.data & 128) != 0)
 				amount += _claimMutant(tokenId, token.data & 3);
 		}
@@ -64,15 +71,18 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 		uint256 pending = pendingClaims[_msgSender()];
 		delete pendingClaims[_msgSender()];
 		_mint(_msgSender(), amount + pending);
+
+		blueprint.mint(_msgSender(), blueprints);
+
 		emit Claimed(_msgSender(), amount + pending);
 	}
 
-	function pendingClaim(address _account) external view override returns (uint256 amount) {
+	function pendingClaim(address _account) external view returns (uint256 amount) {
 		uint256 count = labGame.balanceOf(_account);
 		uint256 untaxed;
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_account, i);
-			ILabGame.Token memory token = labGame.getToken(tokenId);
+			LabGame.Token memory token = labGame.getToken(tokenId);
 			if ((token.data & 128) == 0) {
 				untaxed +=
 					(block.timestamp - tokenClaims[tokenId]) * 
@@ -89,14 +99,12 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 	// -- INTERNAL --
 
 	function _claimScientist(uint256 _tokenId, uint256 _generation) internal returns (uint256 amount) {
-		if (_generation < 3) {
-			amount =
-				(block.timestamp - tokenClaims[_tokenId]) *
-				[ GEN0_RATE, GEN1_RATE, GEN3_RATE ][_generation] /
-				1 days;
-		} else {
-			// Mint blueprint
-		}
+		amount = (block.timestamp - tokenClaims[_tokenId]) *
+			( (_generation < 3) ?
+				[ GEN0_RATE, GEN1_RATE, GEN3_RATE ][_generation] / 1 days :
+				1 / uint256(2 days)
+		);
+
 		tokenClaims[_tokenId] = block.timestamp;
 	}
 	
@@ -148,8 +156,8 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 		_burn(_from, _amount);
 	}
 
-	function initializeClaim(uint256 _tokenId) external override onlyRole(CONTROLLER_ROLE) {
-		ILabGame.Token memory token = labGame.getToken(_tokenId);
+	function initializeClaim(uint256 _tokenId) external onlyRole(CONTROLLER_ROLE) {
+		LabGame.Token memory token = labGame.getToken(_tokenId);
 		if ((token.data & 128) == 0) {
 			tokenClaims[_tokenId] = block.timestamp;
 		} else {
@@ -158,13 +166,13 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 		}
 	}
 	
-	function updateClaims(address _account) external override onlyRole(CONTROLLER_ROLE) {
+	function updateClaims(address _account) external onlyRole(CONTROLLER_ROLE) {
 		uint256 amount;
 		uint256 untaxed;
 		uint256 count = labGame.balanceOf(_account);
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_account, i);
-			ILabGame.Token memory token = labGame.getToken(tokenId);
+			LabGame.Token memory token = labGame.getToken(tokenId);
 			if ((token.data & 128) == 0)
 				untaxed += _claimScientist(tokenId, token.data & 3);
 			else 
@@ -178,6 +186,10 @@ contract Serum is ISerum, ERC20, AccessControl, Pausable {
 
 	function setLabGame(address _labGame) external onlyRole(DEFAULT_ADMIN_ROLE) {
 		labGame = LabGame(_labGame);
+	}
+
+	function setBlueprint(address _blueprint) external onlyRole(DEFAULT_ADMIN_ROLE) {
+		blueprint = Blueprint(_blueprint);
 	}
 
 	/**

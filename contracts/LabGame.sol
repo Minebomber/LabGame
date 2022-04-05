@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "./interfaces/ILabGame.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interfaces/IRandomReceiver.sol";
 
-import "./interfaces/IGenerator.sol";
-import "./interfaces/ISerum.sol";
-import "./interfaces/IMetadata.sol";
+import "./Generator.sol";
+import "./Serum.sol";
+import "./Metadata.sol";
 
-contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiver {
+contract LabGame is ERC721Enumerable, Ownable, Pausable, IRandomReceiver {
 
 	uint256 constant GEN0_PRICE = 0.06 ether;
 	uint256 constant GEN1_PRICE = 2_000 ether;
@@ -32,6 +31,11 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 	uint256 constant MAX_TRAITS = 17;
 	uint256 constant TYPE_OFFSET = 9;
 
+	struct Token {
+		uint8 data; // data & 128 == isMutant, data & 3 == generation
+		uint8[9] trait;
+	}
+
 	bool whitelisted = true;
 	mapping(address => bool) whitelist;
 
@@ -51,9 +55,9 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 
 	uint256[] mutants;
 
-	IGenerator generator;
-	ISerum serum;
-	IMetadata metadata;
+	Generator generator;
+	Serum serum;
+	Metadata metadata;
 
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
@@ -70,12 +74,12 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		address _metadata
 	) ERC721(_name, _symbol) {
 
-		generator = IGenerator(_generator);
-		serum = ISerum(_serum);
-		metadata = IMetadata(_metadata);
+		generator = Generator(_generator);
+		serum = Serum(_serum);
+		metadata = Metadata(_metadata);
 
 		for (uint256 i; i < MAX_TRAITS; i++) {
-			rarities[i] = [ 255, 170, 85, 85 ];
+			rarities[i] = [255, 170, 85, 85];
 			aliases[i] = [0, 0, 0, 1];
 		}
 	}
@@ -89,11 +93,11 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		require(pendingMints[_msgSender()].base == 0, "Account has pending mint");
 		
 		uint256 id = totalSupply();
+		require(id <= GEN3_MAX, "Sold out");
+
 		uint256 max = id + _amount;
-		require(max <= GEN3_MAX, "Sold out");
-		
-		uint256[4] memory GEN_MAX = [ GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX ];
-		uint256[4] memory GEN_PRICE = [ GEN0_PRICE, GEN1_PRICE, GEN2_PRICE, GEN3_PRICE ];
+		uint256[4] memory GEN_MAX = [GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX];
+		uint256[4] memory GEN_PRICE = [GEN0_PRICE, GEN1_PRICE, GEN2_PRICE, GEN3_PRICE];
 		
 		for (uint256 i; i < 4; i++) {
 			if (id < GEN_MAX[i]) {
@@ -162,7 +166,7 @@ contract LabGame is ILabGame, ERC721Enumerable, Ownable, Pausable, IRandomReceiv
 		return ERC721Enumerable.totalSupply() + tokenOffset;
 	}
 
-	function getToken(uint256 _tokenId) external view override returns (Token memory) {
+	function getToken(uint256 _tokenId) external view returns (Token memory) {
 		require(_exists(_tokenId), "Token query for nonexistent token");
 		return tokens[_tokenId];
 	}

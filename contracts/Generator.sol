@@ -7,7 +7,6 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 
-import "./interfaces/ILabGame.sol";
 import "./interfaces/IRandomReceiver.sol";
 
 contract Generator is VRFConsumerBaseV2, AccessControl, Pausable {
