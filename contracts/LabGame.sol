@@ -4,13 +4,14 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./interfaces/IRandomReceiver.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 
-import "./Generator.sol";
 import "./Serum.sol";
 import "./Metadata.sol";
 
-contract LabGame is ERC721Enumerable, Ownable, Pausable, IRandomReceiver {
+contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 
 	uint256 constant GEN0_PRICE = 0.06 ether;
 	uint256 constant GEN1_PRICE = 2_000 ether;
@@ -55,12 +56,18 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, IRandomReceiver {
 
 	uint256[] mutants;
 
-	Generator generator;
 	Serum serum;
 	Metadata metadata;
 
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
+
+	VRFCoordinatorV2Interface vrfCoordinator;
+	LinkTokenInterface linkToken;
+	bytes32 keyHash;
+	uint64 subscriptionId;
+	uint16 requestConfirmations;
+	uint32 callbackGasLimit;
 
 	event Requested(address indexed _account, uint256 _tokenId, uint256 _amount);
 	event Pending(address indexed _account, uint256 _tokenId, uint256 _amount);
@@ -70,22 +77,35 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, IRandomReceiver {
 	 * LabGame constructor
 	 * @param _name ERC721 name
 	 * @param _symbol ERC721 symbol
-	 * @param _generator Generator contract address
 	 * @param _serum Serum contract address
 	 * @param _metadata Metadata contract address
 	 */
 	constructor(
 		string memory _name,
 		string memory _symbol,
-		address _generator,
 		address _serum,
-		address _metadata
-	) ERC721(_name, _symbol) {
+		address _metadata,
+
+		address _vrfCoordinator,
+		address _linkToken,
+		bytes32 _keyHash,
+		uint64 _subscriptionId,
+		uint16 _requestConfirmations,
+		uint32 _callbackGasLimit
+	) ERC721(_name, _symbol) VRFConsumerBaseV2(_vrfCoordinator) {
 
 		// Initialize contracts
-		generator = Generator(_generator);
 		serum = Serum(_serum);
 		metadata = Metadata(_metadata);
+
+		vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
+		linkToken = LinkTokenInterface(_linkToken);
+		keyHash = _keyHash;
+		subscriptionId = _subscriptionId;
+		requestConfirmations = _requestConfirmations;
+		callbackGasLimit = _callbackGasLimit;
+
+		vrfCoordinator.addConsumer(subscriptionId, address(this));
 
 		// Setup alias tables for random token generation
 		for (uint256 i; i < MAX_TRAITS; i++) {
@@ -142,7 +162,14 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, IRandomReceiver {
 		}
 
 		// Request random numbers for tokens, save request id to account
-		uint256 requestId = generator.requestRandom(_amount);
+		//uint256 requestId = generator.requestRandom(_amount);
+		uint256 requestId = vrfCoordinator.requestRandomWords(
+			keyHash,
+			subscriptionId,
+			requestConfirmations,
+			callbackGasLimit,
+			uint32(_amount)
+		);
 		mintRequests[requestId] = _msgSender();
 		// Initialize pending mint with id and count
 		pendingMints[_msgSender()].base = uint224(id + 1);
@@ -151,21 +178,6 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, IRandomReceiver {
 		tokenOffset += _amount;
 		// Mint requested
 		emit Requested(_msgSender(), id + 1, _amount);
-	}
-	
-	/**
-	
-	 */
-	function fulfillRandom(uint256 _requestId, uint256[] memory _randomWords) external override {
-		// Only generator contract provides random numbers
-		require(_msgSender() == address(generator), "Not authorized");
-		// Pop account for request
-		address account = mintRequests[_requestId];
-		delete mintRequests[_requestId];
-		// Update pending mints with received random numbers
-		pendingMints[account].random = _randomWords;
-		// Ready to reveal
-		emit Pending(account, pendingMints[account].base, pendingMints[account].count);
 	}
 
 	/**
@@ -267,6 +279,21 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, IRandomReceiver {
 	}
 
 	// -- INTERNAL --
+
+	/**
+	 * Update pending mints with received random numbers
+	 * @param _requestId ID of fulfilled request
+	 * @param _randomWords Received random numbers
+	 */
+	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
+		// Pop account for request
+		address account = mintRequests[_requestId];
+		delete mintRequests[_requestId];
+		// Update pending mints with received random numbers
+		pendingMints[account].random = _randomWords;
+		// Ready to reveal
+		emit Pending(account, pendingMints[account].base, pendingMints[account].count);
+	}
 
   /**
 	 * Generate the traits of a random token
@@ -386,6 +413,22 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, IRandomReceiver {
 	function setPaused(bool _state) external onlyOwner {
 		if (_state)	_pause();
 		else        _unpause();
+	}
+
+	function setKeyHash(bytes32 _keyHash) external onlyOwner {
+		keyHash = _keyHash;
+	}
+
+	function setSubscriptionId(uint64 _subscriptionId) external onlyOwner {
+		subscriptionId = _subscriptionId;
+	}
+
+	function setRequestConfirmations(uint16 _requestConfirmations) external onlyOwner {
+		requestConfirmations = _requestConfirmations;
+	}
+
+	function setCallbackGasLimit(uint32 _callbackGasLimit) external onlyOwner {
+		callbackGasLimit = _callbackGasLimit;
 	}
 
 	/**
