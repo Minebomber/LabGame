@@ -86,8 +86,7 @@ describe('Serum', function () {
 	});
 
 	describe('pendingClaim', function () {
-		// TODO
-		it('no owned revert', async function () {
+		it('no owned zero', async function () {
 			expect(
 				await this.serum.pendingClaim(this.other.address)
 			).to.equal(0);

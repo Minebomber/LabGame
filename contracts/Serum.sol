@@ -53,7 +53,7 @@ contract Serum is ERC20, AccessControl, Pausable {
 			LabGame.Token memory token = labGame.getToken(tokenId);
 			if ((token.data & 128) == 0) {
 				uint256 current = _claimScientist(tokenId, token.data & 3);
-				if (token.data & 3 < 3)
+				if ((token.data & 3) < 3)
 					amount += current;
 				else
 					blueprints += current;
@@ -99,11 +99,10 @@ contract Serum is ERC20, AccessControl, Pausable {
 	// -- INTERNAL --
 
 	function _claimScientist(uint256 _tokenId, uint256 _generation) internal returns (uint256 amount) {
-		amount = (block.timestamp - tokenClaims[_tokenId]) *
-			( (_generation < 3) ?
-				[ GEN0_RATE, GEN1_RATE, GEN3_RATE ][_generation] / 1 days :
-				1 / uint256(2 days)
-		);
+		if (_generation < 3)
+			amount = (block.timestamp - tokenClaims[_tokenId]) * [ GEN0_RATE, GEN1_RATE, GEN3_RATE ][_generation] / 1 days;
+		else
+			amount = (block.timestamp - tokenClaims[_tokenId]) / 2 days;
 
 		tokenClaims[_tokenId] = block.timestamp;
 	}
@@ -166,20 +165,21 @@ contract Serum is ERC20, AccessControl, Pausable {
 		}
 	}
 	
-	function updateClaims(address _account) external onlyRole(CONTROLLER_ROLE) {
+	function updateClaimFor(address _account, uint256 _tokenId) external onlyRole(CONTROLLER_ROLE) {
+		require(_account == labGame.ownerOf(_tokenId), "Token not owned");
 		uint256 amount;
-		uint256 untaxed;
-		uint256 count = labGame.balanceOf(_account);
-		for (uint256 i; i < count; i++) {
-			uint256 tokenId = labGame.tokenOfOwnerByIndex(_account, i);
-			LabGame.Token memory token = labGame.getToken(tokenId);
-			if ((token.data & 128) == 0)
-				untaxed += _claimScientist(tokenId, token.data & 3);
-			else 
-				amount += _claimMutant(tokenId, token.data & 3);
-		}
+		LabGame.Token memory token = labGame.getToken(_tokenId);
+		if ((token.data & 128) == 0)
+			amount = _claimScientist(_tokenId, token.data & 3);
+			if ((token.data & 3) < 3)
+				amount = _payTax(amount);
+		else
+			amount = _claimMutant(_tokenId, token.data & 3);
 
-		pendingClaims[_account] += amount + _payTax(untaxed);
+		if ((token.data & 3) < 3)
+			pendingClaims[_account] += amount;
+		else
+			blueprint.mint(_account, amount);
 	}
 
 	// -- ADMIN --
