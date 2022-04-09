@@ -4,14 +4,13 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
+import "./Generator.sol";
 
 import "./Serum.sol";
 import "./Metadata.sol";
+import "./Blueprint.sol";
 
-contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
+contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 
 	uint256 constant GEN0_PRICE = 0.06 ether;
 	uint256 constant GEN1_PRICE = 2_000 ether;
@@ -19,22 +18,28 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 	uint256 constant GEN3_PRICE = 50_000 ether;
 	
 	// uint256 constant GEN0_MAX =  5_000;
-	// uint256 constant GEN1_MAX =  7_500;
-	// uint256 constant GEN2_MAX =  8_750;
-	// uint256 constant GEN3_MAX = 10_000;
+	// uint256 constant GEN1_MAX = 10_000;
+	// uint256 constant GEN2_MAX = 12_500;
+	// uint256 constant GEN3_MAX = 15_000;
 	uint256 constant GEN0_MAX = 4;
-	uint256 constant GEN1_MAX = 6;
-	uint256 constant GEN2_MAX = 8;
-	uint256 constant GEN3_MAX = 10;
+	uint256 constant GEN1_MAX = 8;
+	uint256 constant GEN2_MAX = 10;
+	uint256 constant GEN3_MAX = 12;
 
-	uint256 constant MINT_LIMIT = 4;
+	uint256 constant MINT_LIMIT = 2;
 
 	uint256 constant MAX_TRAITS = 17;
 	uint256 constant TYPE_OFFSET = 9;
 
 	struct Token {
-		uint8 data; // data & 128 == isMutant, data & 3 == generation
+		uint8 data;
 		uint8[9] trait;
+	}
+
+	struct Mint {
+		uint224 base;
+		uint32 count;
+		uint256[] random;
 	}
 
 	bool whitelisted = true;
@@ -44,30 +49,16 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 	mapping(uint256 => uint256) hashes;
 
 	mapping(uint256 => address) mintRequests;
-
-	struct PendingMint {
-		uint224 base;
-		uint32 count;
-		uint256[] random;
-	}
-	mapping(address => PendingMint) pendingMints;
+	mapping(address => Mint) pendingMints;
 
 	uint256 tokenOffset;
 
-	uint256[] mutants;
-
 	Serum serum;
 	Metadata metadata;
+	Blueprint blueprint;
 
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
-
-	VRFCoordinatorV2Interface vrfCoordinator;
-	LinkTokenInterface linkToken;
-	bytes32 keyHash;
-	uint64 subscriptionId;
-	uint16 requestConfirmations;
-	uint32 callbackGasLimit;
 
 	event Requested(address indexed _account, uint256 _tokenId, uint256 _amount);
 	event Pending(address indexed _account, uint256 _tokenId, uint256 _amount);
@@ -79,33 +70,27 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 	 * @param _symbol ERC721 symbol
 	 * @param _serum Serum contract address
 	 * @param _metadata Metadata contract address
+	 * @param _vrfCoordinator VRF Coordinator address
+	 * @param _keyHash Gas lane key hash
+	 * @param _subscriptionId VRF subscription id
+	 * @param _callbackGasLimit VRF callback gas limit
 	 */
 	constructor(
 		string memory _name,
 		string memory _symbol,
 		address _serum,
 		address _metadata,
-
 		address _vrfCoordinator,
-		address _linkToken,
 		bytes32 _keyHash,
 		uint64 _subscriptionId,
-		uint16 _requestConfirmations,
 		uint32 _callbackGasLimit
-	) ERC721(_name, _symbol) VRFConsumerBaseV2(_vrfCoordinator) {
-
+	) 
+		ERC721(_name, _symbol)
+		Generator(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit)
+	{
 		// Initialize contracts
 		serum = Serum(_serum);
 		metadata = Metadata(_metadata);
-
-		vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
-		linkToken = LinkTokenInterface(_linkToken);
-		keyHash = _keyHash;
-		subscriptionId = _subscriptionId;
-		requestConfirmations = _requestConfirmations;
-		callbackGasLimit = _callbackGasLimit;
-
-		vrfCoordinator.addConsumer(subscriptionId, address(this));
 
 		// Setup alias tables for random token generation
 		for (uint256 i; i < MAX_TRAITS; i++) {
@@ -149,6 +134,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 						require(_burnIds.length == _amount, "Invalid tokens");
 						for (uint256 j; j < _burnIds.length; j++) {
 							require(ownerOf(_burnIds[j]) == _msgSender(), "Burn not owned");
+							require(tokens[_burnIds[j]].data & 3 == i - 1, "Must burn previous generation");
 							_burn(_burnIds[j]);
 						}
 						// Add burned tokens to tokenId offset
@@ -162,11 +148,10 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 		}
 
 		// Request random numbers for tokens, save request id to account
-		//uint256 requestId = generator.requestRandom(_amount);
-		uint256 requestId = vrfCoordinator.requestRandomWords(
+		uint256 requestId = VRF_COORDINATOR.requestRandomWords(
 			keyHash,
 			subscriptionId,
-			requestConfirmations,
+			3,
 			callbackGasLimit,
 			uint32(_amount)
 		);
@@ -187,22 +172,20 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 		// Validate accounts pending mint
 		require(pendingMints[_msgSender()].base > 0, "No pending mint");
 		require(pendingMints[_msgSender()].random.length > 0, "Reveal not ready");
-		PendingMint memory pending = pendingMints[_msgSender()];
+		Mint memory pending = pendingMints[_msgSender()];
 		delete pendingMints[_msgSender()];
 		// Generate all tokens
 		for (uint256 i; i < pending.count; i++) {
-			// For generation > 0, mutants can steal mints
-			address recipient;
-			if (pending.base + i > GEN0_MAX)
-				recipient = _selectRandomOwner(pending.random[i] >> 160);
-			if (recipient == address(0)) recipient = _msgSender();
 			// Select traits and mint token
-			_generate(pending.base + i, pending.random[i]);
-			_safeMint(recipient, pending.base + i);
+			Token memory token = _generate(pending.base + i, pending.random[i]);
+			_safeMint(_msgSender(), pending.base + i);
 			// Setup serum claim for the token
-			serum.initializeClaim(pending.base + i);
+			if (token.data == 131)
+				blueprint.initializeClaim(pending.base + i);
+			else
+				serum.initializeClaim(pending.base + i);
 			// Token revealed
-			emit Revealed(recipient, pending.base + i);
+			emit Revealed(_msgSender(), pending.base + i);
 		}
 		// Tokens minted, update offset
 		tokenOffset -= pending.count;
@@ -242,8 +225,12 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 	 * @param _tokenId ID of token being transferred
 	 */
 	function transferFrom(address _from, address _to, uint256 _tokenId) public override (ERC721, IERC721) {
-		// Add token serum claim to pending
-		serum.updateClaimFor(_from, _tokenId);
+		// Add token claim to pending
+		if (tokens[_tokenId].data == 131)
+			blueprint.updateClaimFor(_from, _tokenId);
+		else
+			serum.updateClaimFor(_from, _tokenId);
+
 		ERC721.transferFrom(_from, _to, _tokenId);
 	}
 
@@ -255,8 +242,12 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 	 * @param _data Transfer data
 	 */
 	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) public override (ERC721, IERC721) {
-		// Add token serum claim to pending
-		serum.updateClaimFor(_from, _tokenId);
+		// Add token claim to pending
+		if (tokens[_tokenId].data == 131)
+			blueprint.updateClaimFor(_from, _tokenId);
+		else
+			serum.updateClaimFor(_from, _tokenId);
+
 		ERC721.safeTransferFrom(_from, _to, _tokenId, _data);
 	}
 
@@ -300,8 +291,9 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 	 * Retries until a unique one is generated
 	 * @param _tokenId ID of token to generate
 	 * @param _seed Random seed
+	 * @return token Generated token
 	 */
-	function _generate(uint256 _tokenId, uint256 _seed) internal {
+	function _generate(uint256 _tokenId, uint256 _seed) internal returns (Token memory token) {
 		// Calculate generation of token
 		uint256 generation;
 		if (_tokenId <= GEN0_MAX) {}
@@ -309,7 +301,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 		else if (_tokenId <= GEN2_MAX) generation = 2;
 		else if (_tokenId <= GEN3_MAX) generation = 3;
 		// Select traits with given seed
-		Token memory token = _selectTraits(_seed, generation);
+		token = _selectTraits(_seed, generation);
 		uint256 hashed = _hashToken(token);
 		// While traits are not unique
 		while (hashes[hashed] != 0) {
@@ -366,20 +358,6 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 		)));
 	}
 
-  /**
-	 * Select a random mutant owner for mint stealing using a random seed
-	 * @param _seed Random seed
-	 * @return Address of selected owner, or 0 if not stolen
-	 */
-	function _selectRandomOwner(uint256 _seed) internal view returns (address) {
-		if (mutants.length == 0) return address(0);
-		uint256 mutantId = mutants[ (_seed & 0xFFFFFFFF) % mutants.length];
-		uint256 generation = tokens[mutantId].data & 3;
-		if ( ((_seed >> 32) % 1000) < ([100, 125, 150, 175][generation]) )
-			return ownerOf(mutantId);
-		return address(0);
-	}
-
 	// -- OWNER --
 
 	/**
@@ -415,20 +393,36 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, VRFConsumerBaseV2 {
 		else        _unpause();
 	}
 
+	/**
+	 * Set blueprint contract
+	 * @param _blueprint Address of the blueprint contract
+	 */
+	function setBlueprint(address _blueprint) external onlyOwner {
+		blueprint = Blueprint(_blueprint);
+	}
+
+	/**
+	 * Set the VRF key hash
+	 * @param _keyHash New keyHash
+	 */
 	function setKeyHash(bytes32 _keyHash) external onlyOwner {
-		keyHash = _keyHash;
+		_setKeyHash(_keyHash);
 	}
 
+	/**
+	 * Set the VRF subscription ID
+	 * @param _subscriptionId New subscriptionId
+	 */
 	function setSubscriptionId(uint64 _subscriptionId) external onlyOwner {
-		subscriptionId = _subscriptionId;
+		_setSubscriptionId(_subscriptionId);
 	}
 
-	function setRequestConfirmations(uint16 _requestConfirmations) external onlyOwner {
-		requestConfirmations = _requestConfirmations;
-	}
-
+	/**
+	 * Set the VRF callback gas limit
+	 * @param _callbackGasLimit New callbackGasLimit
+	 */
 	function setCallbackGasLimit(uint32 _callbackGasLimit) external onlyOwner {
-		callbackGasLimit = _callbackGasLimit;
+		_setCallbackGasLimit(_callbackGasLimit);
 	}
 
 	/**

@@ -6,14 +6,13 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "./LabGame.sol";
-import "./Blueprint.sol";
 
 contract Serum is ERC20, AccessControl, Pausable {
 	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 	
 	uint256 constant GEN0_RATE = 1000 ether;
 	uint256 constant GEN1_RATE = 1200 ether;
-	uint256 constant GEN3_RATE = 1500 ether;
+	uint256 constant GEN2_RATE = 1500 ether;
 
 	uint256 constant GEN0_TAX = 100; // 10.0%
 	uint256 constant GEN1_TAX = 125; // 12.5%
@@ -28,7 +27,6 @@ contract Serum is ERC20, AccessControl, Pausable {
 	mapping(address => uint256) pendingClaims; 
 
 	LabGame labGame;
-	Blueprint blueprint;
 
 	event Claimed(address indexed _account, uint256 _amount);
 
@@ -37,46 +35,57 @@ contract Serum is ERC20, AccessControl, Pausable {
 	 * @param _name ERC20 token name
 	 * @param _symbol ERC20 token symbol
 	 */
-	constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {
+	constructor(
+		string memory _name,
+		string memory _symbol
+	)
+		ERC20(_name, _symbol)
+	{
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 	}
 
 	// -- EXTERNAL --
 
+	/**
+	 * Claim rewards for owned tokens
+	 */
 	function claim() external {
+		// Verify owned tokens
 		uint256 count = labGame.balanceOf(_msgSender());
 		require(count > 0, "No owned tokens");
 		uint256 amount;
-		uint256 blueprints;
+		// Iterate wallet for scientists
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
 			LabGame.Token memory token = labGame.getToken(tokenId);
-			if ((token.data & 128) == 0) {
-				uint256 current = _claimScientist(tokenId, token.data & 3);
-				if ((token.data & 3) < 3)
-					amount += current;
-				else
-					blueprints += current;
+			// Claim only Gen 0-2 scientists
+			if ((token.data & 128) == 0 && (token.data & 3) < 3) {
+				amount += _claimScientist(tokenId, token.data & 3);
 			}
 		}
+		// Pay mutant tax
 		amount = _payTax(amount);
-
+		// Iterate wallet for mutants
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
 			LabGame.Token memory token = labGame.getToken(tokenId);
 			if ((token.data & 128) != 0)
 				amount += _claimMutant(tokenId, token.data & 3);
 		}
-
+		// Include pending claim balance
 		uint256 pending = pendingClaims[_msgSender()];
 		delete pendingClaims[_msgSender()];
+		// Mint
 		_mint(_msgSender(), amount + pending);
-
-		blueprint.mint(_msgSender(), blueprints);
 
 		emit Claimed(_msgSender(), amount + pending);
 	}
 
+	/**
+	 * Calculate pending claim
+	 * @param _account Account to query pending claim for
+	 * @return amount Amount of claimable serum
+	 */
 	function pendingClaim(address _account) external view returns (uint256 amount) {
 		uint256 count = labGame.balanceOf(_account);
 		uint256 untaxed;
@@ -84,9 +93,10 @@ contract Serum is ERC20, AccessControl, Pausable {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_account, i);
 			LabGame.Token memory token = labGame.getToken(tokenId);
 			if ((token.data & 128) == 0) {
+				if ((token.data & 3) == 3) continue;
 				untaxed +=
 					(block.timestamp - tokenClaims[tokenId]) * 
-					[ GEN0_RATE, GEN1_RATE, GEN3_RATE, 0 ][token.data & 3] / 
+					[ GEN0_RATE, GEN1_RATE, GEN2_RATE, 0 ][token.data & 3] / 
 					1 days;
 			} else {
 				amount += mutantEarnings[token.data & 3] - tokenClaims[tokenId];
@@ -96,34 +106,87 @@ contract Serum is ERC20, AccessControl, Pausable {
 		amount += pendingClaims[_account];
 	}
 
+	// -- LABGAME -- 
+
+	modifier onlyLabGame {
+		require(_msgSender() == address(labGame), "Not authorized");
+		_;
+	}
+
+	/**
+	 * Setup the intial value for a new token
+	 * @param _tokenId ID of the token
+	 */
+	function initializeClaim(uint256 _tokenId) external onlyLabGame {
+		LabGame.Token memory token = labGame.getToken(_tokenId);
+		if ((token.data & 128) == 0) {
+			if ((token.data & 3) < 3)
+				tokenClaims[_tokenId] = block.timestamp;
+		} else {
+			tokenClaims[_tokenId] = mutantEarnings[token.data & 3];
+			mutantCounts[token.data & 3]++;
+		}
+	}
+
+	function updateClaimFor(address _account, uint256 _tokenId) external onlyLabGame {
+		require(_account == labGame.ownerOf(_tokenId), "Token not owned");
+		uint256 amount;
+		LabGame.Token memory token = labGame.getToken(_tokenId);
+		if ((token.data & 128) == 0) {
+			amount = _claimScientist(_tokenId, token.data & 3);
+			amount = _payTax(amount);
+		} else {
+			amount = _claimMutant(_tokenId, token.data & 3);
+		}
+		pendingClaims[_account] += amount;
+	}
+
 	// -- INTERNAL --
 
+	/**
+	 * Claim scientist token rewards
+	 * @param _tokenId ID of the token
+	 * @param _generation Generation of the token
+	 * @return amount Amount of serum/blueprints for this token
+	 */
 	function _claimScientist(uint256 _tokenId, uint256 _generation) internal returns (uint256 amount) {
-		if (_generation < 3)
-			amount = (block.timestamp - tokenClaims[_tokenId]) * [ GEN0_RATE, GEN1_RATE, GEN3_RATE ][_generation] / 1 days;
-		else
-			amount = (block.timestamp - tokenClaims[_tokenId]) / 2 days;
-
+		amount = (block.timestamp - tokenClaims[_tokenId]) * [ GEN0_RATE, GEN1_RATE, GEN2_RATE ][_generation] / 1 days;
 		tokenClaims[_tokenId] = block.timestamp;
 	}
 	
+	/**
+	 * Claim mutant token rewards
+	 * @param _tokenId ID of the token
+	 * @param _generation Generation of the token
+	 * @return amount Amount of serum for this token
+	 */
 	function _claimMutant(uint256 _tokenId, uint256 _generation) internal returns (uint256 amount) {
 		amount = (mutantEarnings[_generation] - tokenClaims[_tokenId]);
 		tokenClaims[_tokenId] = mutantEarnings[_generation];
 	}
 
+	/**
+	 * Pay mutant tax for an amount of serum
+	 * @param _amount Untaxed amount
+	 * @return Amount after tax
+	 */
 	function _payTax(uint256 _amount) internal returns (uint256) {
+		uint256 amount = _amount;
 		for (uint256 i; i < 4; i++) {
 			uint256 mutantCount = mutantCounts[i];
 			if (mutantCount == 0) continue;
-
 			uint256 tax = _amount * [ GEN0_TAX, GEN1_TAX, GEN2_TAX, GEN3_TAX ][i] / 1000;
 			mutantEarnings[i] += tax / mutantCount;
-			_amount -= tax;
+			amount -= tax;
 		}
-		return _amount;
+		return amount;
 	}
 
+  /**
+	 * Calculates the tax for a pending claim amount
+	 * @param _amount Untaxed amount
+	 * @return Amount after tax
+	 */
 	function _pendingTax(uint256 _amount) internal view returns (uint256) {
 		for (uint256 i; i < 4; i++) {
 			uint256 mutantCount = mutantCounts[i];
@@ -133,8 +196,7 @@ contract Serum is ERC20, AccessControl, Pausable {
 		}
 		return _amount;
 	}
-
-
+	// MARK: CONTROLLER
 	// -- CONTROLLER --
 
 	/**
@@ -154,42 +216,11 @@ contract Serum is ERC20, AccessControl, Pausable {
 	function burn(address _from, uint256 _amount) external whenNotPaused onlyRole(CONTROLLER_ROLE) {
 		_burn(_from, _amount);
 	}
-
-	function initializeClaim(uint256 _tokenId) external onlyRole(CONTROLLER_ROLE) {
-		LabGame.Token memory token = labGame.getToken(_tokenId);
-		if ((token.data & 128) == 0) {
-			tokenClaims[_tokenId] = block.timestamp;
-		} else {
-			tokenClaims[_tokenId] = mutantEarnings[token.data & 3];
-			mutantCounts[token.data & 3]++;
-		}
-	}
 	
-	function updateClaimFor(address _account, uint256 _tokenId) external onlyRole(CONTROLLER_ROLE) {
-		require(_account == labGame.ownerOf(_tokenId), "Token not owned");
-		uint256 amount;
-		LabGame.Token memory token = labGame.getToken(_tokenId);
-		if ((token.data & 128) == 0)
-			amount = _claimScientist(_tokenId, token.data & 3);
-			if ((token.data & 3) < 3)
-				amount = _payTax(amount);
-		else
-			amount = _claimMutant(_tokenId, token.data & 3);
-
-		if ((token.data & 3) < 3)
-			pendingClaims[_account] += amount;
-		else
-			blueprint.mint(_account, amount);
-	}
-
 	// -- ADMIN --
 
 	function setLabGame(address _labGame) external onlyRole(DEFAULT_ADMIN_ROLE) {
 		labGame = LabGame(_labGame);
-	}
-
-	function setBlueprint(address _blueprint) external onlyRole(DEFAULT_ADMIN_ROLE) {
-		blueprint = Blueprint(_blueprint);
 	}
 
 	/**
