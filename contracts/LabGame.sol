@@ -36,20 +36,11 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 		uint8[9] trait;
 	}
 
-	struct Mint {
-		uint224 base;
-		uint32 count;
-		uint256[] random;
-	}
-
 	bool whitelisted = true;
 	mapping(address => bool) whitelist;
 
 	mapping(uint256 => Token) tokens;
 	mapping(uint256 => uint256) hashes;
-
-	mapping(uint256 => address) mintRequests;
-	mapping(address => Mint) pendingMints;
 
 	uint256 tokenOffset;
 
@@ -59,10 +50,6 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
-
-	event Requested(address indexed _account, uint256 _tokenId, uint256 _amount);
-	event Pending(address indexed _account, uint256 _tokenId, uint256 _amount);
-	event Revealed(address indexed _account, uint256 _tokenId);
 
 	/**
 	 * LabGame constructor
@@ -106,12 +93,11 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 	 * @param _amount Number of tokens to mint
 	 * @param _burnIds Token Ids to burn as payment (for gen 1 & 2)
 	 */
-	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused {
+	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused zeroPending(_msgSender()) {
 		// Validate msgSender & amount
 		require(tx.origin == _msgSender(), "Only EOA");
 		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
 		if (whitelisted) require(isWhitelisted(_msgSender()), "Not whitelisted");
-		require(pendingMints[_msgSender()].base == 0, "Account has pending mint");
 		
 		// Validate tokenId and price
 		uint256 id = totalSupply();
@@ -147,48 +133,28 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 			}
 		}
 
-		// Request random numbers for tokens, save request id to account
-		uint256 requestId = VRF_COORDINATOR.requestRandomWords(
-			keyHash,
-			subscriptionId,
-			3,
-			callbackGasLimit,
-			uint32(_amount)
-		);
-		mintRequests[requestId] = _msgSender();
-		// Initialize pending mint with id and count
-		pendingMints[_msgSender()].base = uint224(id + 1);
-		pendingMints[_msgSender()].count = uint32(_amount);
-		// Add pending mints to tokenId offset
-		tokenOffset += _amount;
-		// Mint requested
-		emit Requested(_msgSender(), id + 1, _amount);
+		_request(_msgSender(), id + 1, _amount);
 	}
 
 	/**
 	 * Reveal pending mints
 	 */
 	function reveal() external whenNotPaused {
-		// Validate accounts pending mint
-		require(pendingMints[_msgSender()].base > 0, "No pending mint");
-		require(pendingMints[_msgSender()].random.length > 0, "Reveal not ready");
-		Mint memory pending = pendingMints[_msgSender()];
-		delete pendingMints[_msgSender()];
-		// Generate all tokens
-		for (uint256 i; i < pending.count; i++) {
-			// Select traits and mint token
-			Token memory token = _generate(pending.base + i, pending.random[i]);
-			_safeMint(_msgSender(), pending.base + i);
-			// Setup serum claim for the token
-			if (token.data == 131)
-				blueprint.initializeClaim(pending.base + i);
-			else
-				serum.initializeClaim(pending.base + i);
-			// Token revealed
-			emit Revealed(_msgSender(), pending.base + i);
-		}
+		(, uint256 count) = pendingOf(_msgSender());
+		_reveal(_msgSender());
 		// Tokens minted, update offset
-		tokenOffset -= pending.count;
+		tokenOffset -= count;
+	}
+
+	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
+		// Select traits and mint token
+		Token memory token = _generate(_tokenId, _seed);
+		_safeMint(_msgSender(), _tokenId);
+		// Setup serum claim for the token
+		if (token.data == 131)
+			blueprint.initializeClaim(_tokenId);
+		else
+			serum.initializeClaim(_tokenId);
 	}
 
 	/**
@@ -260,31 +226,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 		return whitelist[_account];
 	}
 
-	/**
-	 * Get the current pending mints of a user account
-	 * @param _account Address of account to query
-	 * @return Pending token base ID, amount of pending tokens
-	 */
-	function pendingOf(address _account) external view returns (uint256, uint256) {
-		return (pendingMints[_account].base, pendingMints[_account].random.length);
-	}
-
 	// -- INTERNAL --
-
-	/**
-	 * Update pending mints with received random numbers
-	 * @param _requestId ID of fulfilled request
-	 * @param _randomWords Received random numbers
-	 */
-	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
-		// Pop account for request
-		address account = mintRequests[_requestId];
-		delete mintRequests[_requestId];
-		// Update pending mints with received random numbers
-		pendingMints[account].random = _randomWords;
-		// Ready to reveal
-		emit Pending(account, pendingMints[account].base, pendingMints[account].count);
-	}
 
   /**
 	 * Generate the traits of a random token

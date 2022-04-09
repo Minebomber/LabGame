@@ -17,25 +17,12 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator {
 
 	mapping (uint256 => Token) tokens;
 
-	struct Mint {
-		uint224 base;
-		uint32 count;
-		uint256[] random;
-	}
-
-	mapping(uint256 => address) mintRequests;
-	mapping(address => Mint) pendingMints;
-
 	uint256 tokenOffset;
 
 	LabGame labGame;
 
 	mapping(uint256 => uint256) tokenClaims;
 	mapping(address => uint256) pendingClaims; 
-
-	event Requested(address indexed _account, uint256 _tokenId, uint256 _amount);
-	event Pending(address indexed _account, uint256 _tokenId, uint256 _amount);
-	event Revealed(address indexed _account, uint256 _tokenId);
 
 	constructor(
 		string memory _name,
@@ -56,18 +43,10 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator {
 	// -- EXTERNAL --
 
 	function reveal() external {
-		require(pendingMints[_msgSender()].base > 0, "No pending mint");
-		require(pendingMints[_msgSender()].random.length > 0, "Reveal not ready");
-		Mint memory pending = pendingMints[_msgSender()];
-		delete pendingMints[_msgSender()];
-
-		for (uint256 i; i < pending.count; i++) {
-			_generate(pending.base + i, pending.random[i]);
-			_safeMint(_msgSender(), pending.base + i);
-			emit Revealed(_msgSender(), pending.base + i);
-		}
-
-		tokenOffset -= pending.count;
+		(, uint256 count) = pendingOf(_msgSender());
+		_reveal(_msgSender());
+		// Tokens minted, update offset
+		tokenOffset -= count;
 	}
 
 	function getToken(uint256 _tokenId) external view returns (Token memory) {
@@ -80,30 +59,21 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator {
 	}
 
 	// -- CONTROLLER --
-
+	// TODO: Internal
 	function mint(address _to, uint256 _amount) external onlyRole(CONTROLLER_ROLE) {
-		uint256 id = totalSupply();
-		uint256 requestId = VRF_COORDINATOR.requestRandomWords(
-			keyHash,
-			subscriptionId,
-			3,
-			callbackGasLimit,
-			uint32(_amount)
-		);
-		mintRequests[requestId] = _to;
-		pendingMints[_to].base = uint224(totalSupply() + 1);
-		pendingMints[_to].count = uint32(_amount);
+		_request(_to, totalSupply() + 1, _amount);
 		tokenOffset += _amount;
-		emit Requested(_msgSender(), id + 1, _amount);
 	}
 
 	function totalSupply() public view override returns (uint256) {
 		return ERC721Enumerable.totalSupply() + tokenOffset;
 	}
 
-	function claim() external {
+	function claim() external zeroPending(_msgSender()) {
 		// Require no pending mints
 		// Scientist reward -> claim ( request randomness ) -> reveal
+		// TODO: Loop, calculate rewards, call mint
+		
 	}
 
 	// -- LABGAME -- 
@@ -130,15 +100,14 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator {
 
 	// -- INTERNAL --
 
-	function _generate(uint256 _tokenId, uint256 _seed) internal {
-
+	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
+		_generate(_tokenId, _seed);
+		_safeMint(_msgSender(), _tokenId);
 	}
 
-	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
-		address account = mintRequests[_requestId];
-		pendingMints[account].random = _randomWords;
-		emit Pending(account, pendingMints[account].base, pendingMints[account].count);
-		delete mintRequests[_requestId];
+
+	function _generate(uint256 _tokenId, uint256 _seed) internal {
+
 	}
 
 	// -- ADMIN --
