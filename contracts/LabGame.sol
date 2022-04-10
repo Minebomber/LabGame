@@ -44,9 +44,9 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 
 	uint256 tokenOffset;
 
-	Serum serum;
-	Metadata metadata;
-	Blueprint blueprint;
+	Serum public serum;
+	Metadata public metadata;
+	Blueprint public blueprint;
 
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
@@ -106,7 +106,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 		uint256 generation;
 		if (id < GEN0_MAX) {
 			require(max <= GEN0_MAX, "Generation limit");
-			require(msg.value <= _amount * GEN0_PRICE);
+			require(msg.value >= _amount * GEN0_PRICE, "Not enough ether");
 		} else if (id < GEN1_MAX) {
 			require(max <= GEN1_MAX, "Generation limit");
 			serum.burn(_msgSender(), _amount * GEN1_PRICE);
@@ -122,7 +122,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 		}
 		// Burn tokens to mint gen 1 and 2
 		if (generation == 1 || generation == 2) {
-			require(_burnIds.length == _amount, "Invalid to burn tokens");
+			require(_burnIds.length == _amount, "Invalid burn tokens");
 			for (uint256 i; i < _burnIds.length; i++) {
 				require(_msgSender() == ownerOf(_burnIds[i]), "Burn token not owned");
 				require(tokens[_burnIds[i]].data & 3 == generation - 1, "Must burn previous generation");

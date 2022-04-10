@@ -19,23 +19,7 @@ const message = {
 	accessControlMissingRole: /AccessControl: account .* is missing role .*/,
 	ownableNotOwner: 'Ownable: caller is not the owner',
 	pausablePaused: 'Pausable: paused',
-};
-
-const parseAddress = (address) => {
-	return ethers.utils.getAddress(address.substring(26));
-};
-
-const storageAt = async (address, index) => {
-	return await waffle.provider.getStorageAt(address, index);
-}
-
-const mappingAt = async (address, index, key) => {
-	return await waffle.provider.getStorageAt(address, ethers.utils.keccak256(
-		ethers.utils.concat([
-			ethers.utils.hexZeroPad(key, 32),
-			ethers.utils.hexZeroPad(ethers.BigNumber.from(index).toHexString(), 32),
-		])
-	));
+	erc20BurnExceedsBalance: 'ERC20: burn amount exceeds balance',
 };
 
 Object.assign(exports, {
@@ -43,7 +27,4 @@ Object.assign(exports, {
 	restore,
 	deploy,
 	message,
-	parseAddress,
-	storageAt,
-	mappingAt,
 });

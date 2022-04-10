@@ -1,6 +1,5 @@
 require('@nomiclabs/hardhat-waffle');
 require('hardhat-contract-sizer');
-require('hardhat-storage-layout');
 
 module.exports = {
   solidity: {
@@ -8,11 +7,6 @@ module.exports = {
 		settings: {
 			optimizer: {
 				enabled: true,
-			},
-			outputSelection: {
-				"*": {
-					"*": ["storageLayout"],
-				},
 			},
 		},
 	},
