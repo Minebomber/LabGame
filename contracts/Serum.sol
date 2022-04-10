@@ -26,7 +26,7 @@ contract Serum is ERC20, AccessControl, Pausable {
 
 	mapping(address => uint256) pendingClaims; 
 
-	LabGame labGame;
+	LabGame public labGame;
 
 	event Claimed(address indexed _account, uint256 _amount);
 

@@ -7,11 +7,11 @@ const {
 	message,
 } = require('./util');
 
-const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
-const SUBSCRIPTION_ID = 0;
-const CALLBACK_GAS_LIMIT = 100_000;
 
 describe('LabGame', function () {
+	const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
+	const SUBSCRIPTION_ID = 0;
+	const CALLBACK_GAS_LIMIT = 100_000;
 
 	before(async function () {
 		this.vrf = await deploy('TestVRFCoordinatorV2');
@@ -45,6 +45,14 @@ describe('LabGame', function () {
 	});
 
 	describe('constructor', function () {
+		it('correct name', async function () {
+			expect(await this.labGame.name()).to.equal('LabGame');
+		});
+
+		it('correct symbol', async function () {
+			expect(await this.labGame.symbol()).to.equal('LABGAME');
+		});
+
 		it('correct serum', async function () {
 			expect(await this.labGame.serum()).to.equal(this.serum.address);
 		});
@@ -178,7 +186,7 @@ describe('LabGame', function () {
 			).to.be.revertedWith('Burn token not owned');
 		});
 
-		it('duplicate burnId revert', async function () {
+		it('duplicate burnIds revert', async function () {
 			await this.labGame.connect(this.owner).setWhitelisted(false);
 			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
@@ -191,6 +199,21 @@ describe('LabGame', function () {
 			await expect(
 				this.labGame.connect(this.other).mint(2, [1, 1])
 			).to.be.revertedWith(message.erc721OwnerQueryNonexistent);
+		});
+
+		it('too many burnIds revert', async function () {
+			await this.labGame.connect(this.owner).setWhitelisted(false);
+			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			await this.serum.connect(this.owner).addController(this.owner.address);
+			await this.serum.connect(this.owner).mint(this.other.address, ethers.utils.parseEther('2000'));
+			await expect(
+				this.labGame.connect(this.other).mint(1, [1, 2])
+			).to.be.revertedWith('Invalid burn tokens');
 		});
 
 		it('correct burnId success', async function () {

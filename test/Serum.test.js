@@ -5,46 +5,32 @@ const {
 	restore,
 	deploy,
 	message,
-	parseAddress,
-	storageAt,
-	mappingAt
 } = require('./util');
 
 describe('Serum', function () {
+	const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
+	const SUBSCRIPTION_ID = 0;
+	const CALLBACK_GAS_LIMIT = 100_000;
 
 	before(async function () {
-		const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
-		const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
-		const SUBSCRIPTION_ID = 0;
-		const REQUEST_CONFIRMATIONS = 3;
-		const CALLBACK_GAS_LIMIT = 100_000;
-
 		this.vrf = await deploy('TestVRFCoordinatorV2');
-		this.generator = await deploy(
-			'Generator',
-			this.vrf.address,
-			LINK_TOKEN,
-			KEY_HASH,
-			SUBSCRIPTION_ID,
-			REQUEST_CONFIRMATIONS,
-			CALLBACK_GAS_LIMIT
-		);
-
 		this.serum = await deploy('Serum', 'Serum', 'SERUM');
 		this.metadata = await deploy('Metadata');
 		this.labGame = await deploy(
 			'LabGame',
 			'LabGame',
 			'LABGAME',
-			this.generator.address,
 			this.serum.address,
-			this.metadata.address
+			this.metadata.address,
+			this.vrf.address,
+			KEY_HASH,
+			SUBSCRIPTION_ID,
+			CALLBACK_GAS_LIMIT
 		);
 
-		await this.generator.addController(this.labGame.address);
 		await this.serum.addController(this.labGame.address);
 		await this.serum.setLabGame(this.labGame.address);
-		await this.labGame.setWhitelisted(false);
+		await this.metadata.setLabGame(this.labGame.address);
 
 		[this.owner, this.other] = await ethers.getSigners();
 	});
@@ -90,6 +76,22 @@ describe('Serum', function () {
 			expect(
 				await this.serum.pendingClaim(this.other.address)
 			).to.equal(0);
+		});
+	});
+
+	describe('initializeClaim', function() {
+		it('non-LabGame revert', async function() {
+			await expect(
+				this.serum.initializeClaim(0)
+			).to.be.revertedWith('Not authorized');
+		});
+	});
+
+	describe('updateClaimFor', function() {
+		it('non-LabGame revert', async function() {
+			await expect(
+				this.serum.initializeClaim(0)
+			).to.be.revertedWith('Not authorized');
 		});
 	});
 
@@ -141,20 +143,10 @@ describe('Serum', function () {
 		});
 	});
 
-	describe('initializeClaim', function() {
-		it('non-generator revert', async function() {
-			await expect(
-				this.serum.initializeClaim(0)
-			).to.be.revertedWith(message.accessControlMissingRole);
-		});
-	});
-
 	describe('setLabGame', function () {
 		it('owner success', async function () {
 			await this.serum.connect(this.owner).setLabGame(this.other.address);
-			expect(
-				parseAddress(await storageAt(this.serum.address, 17))
-			).to.equal(this.other.address);
+			expect(await this.serum.labGame()).to.equal(this.other.address);
 		});
 
 		it('non-owner revert', async function () {
