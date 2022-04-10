@@ -20,6 +20,7 @@ const message = {
 	ownableNotOwner: 'Ownable: caller is not the owner',
 	pausablePaused: 'Pausable: paused',
 	erc20BurnExceedsBalance: 'ERC20: burn amount exceeds balance',
+	erc721OwnerQueryNonexistent: 'ERC721: owner query for nonexistent token',
 };
 
 Object.assign(exports, {

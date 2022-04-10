@@ -147,6 +147,67 @@ describe('LabGame', function () {
 				this.labGame.connect(this.other).mint(1, [])
 			).to.be.revertedWith('Invalid burn tokens');
 		});
+
+		it('nonexistent burnIds revert', async function () {
+			await this.labGame.connect(this.owner).setWhitelisted(false);
+			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			await this.serum.connect(this.owner).addController(this.owner.address);
+			await this.serum.connect(this.owner).mint(this.other.address, ethers.utils.parseEther('2000'));
+			await expect(
+				this.labGame.connect(this.other).mint(1, [0])
+			).to.be.revertedWith(message.erc721OwnerQueryNonexistent);
+		});
+
+		it('not owned burnIds revert', async function () {
+			await this.labGame.connect(this.owner).setWhitelisted(false);
+			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			await this.serum.connect(this.owner).addController(this.owner.address);
+			await this.serum.connect(this.owner).mint(this.owner.address, ethers.utils.parseEther('2000'));
+			await expect(
+				this.labGame.connect(this.owner).mint(1, [1])
+			).to.be.revertedWith('Burn token not owned');
+		});
+
+		it('duplicate burnId revert', async function () {
+			await this.labGame.connect(this.owner).setWhitelisted(false);
+			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			await this.serum.connect(this.owner).addController(this.owner.address);
+			await this.serum.connect(this.owner).mint(this.other.address, ethers.utils.parseEther('4000'));
+			await expect(
+				this.labGame.connect(this.other).mint(2, [1, 1])
+			).to.be.revertedWith(message.erc721OwnerQueryNonexistent);
+		});
+
+		it('correct burnId success', async function () {
+			await this.labGame.connect(this.owner).setWhitelisted(false);
+			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			await this.labGame.connect(this.other).mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			await this.serum.connect(this.owner).addController(this.owner.address);
+			await this.serum.connect(this.owner).mint(this.other.address, ethers.utils.parseEther('2000'));
+			await expect(
+				this.labGame.connect(this.other).mint(1, [1])
+			).to.emit(this.labGame, 'Requested');
+		});
+
 	});
 
 	describe('reveal', function () {
