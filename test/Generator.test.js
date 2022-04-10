@@ -2,10 +2,8 @@ const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { snapshot, restore, deploy, message } = require('./util');
 
-const LINK_TOKEN = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
 const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
 const SUBSCRIPTION_ID = 0;
-const REQUEST_CONFIRMATIONS = 3;
 const CALLBACK_GAS_LIMIT = 100_000;
 
 describe('Generator', function () {
@@ -13,16 +11,13 @@ describe('Generator', function () {
 	before(async function () {
 		this.vrf = await deploy('TestVRFCoordinatorV2');
 		this.generator = await deploy(
-			'Generator',
+			'TestGenerator',
 			this.vrf.address,
-			LINK_TOKEN,
 			KEY_HASH,
 			SUBSCRIPTION_ID,
-			REQUEST_CONFIRMATIONS,
 			CALLBACK_GAS_LIMIT
 		);
-
-		[this.owner, this.other] = await ethers.getSigners();
+		this.accounts = (await ethers.getSigners()).map(a => a.address);
 	});
 
 	beforeEach(async function () {
@@ -34,163 +29,157 @@ describe('Generator', function () {
 	});
 
 	describe('constructor', function () {
-		it('owner has admin role', async function () {
-			expect(
-				await this.generator.hasRole(this.generator.DEFAULT_ADMIN_ROLE(), this.owner.address)
-			).to.equal(true);
-		});
-
 		it('correct vrfCoordinator', async function () {
 			expect(
-				await this.generator.vrfCoordinator()
+				await this.generator.getVrfCoordinator()
 			).to.equal(this.vrf.address);
-		});
-
-		it('correct linkToken', async function () {
-			expect(
-				await this.generator.linkToken()
-			).to.equal(LINK_TOKEN);
 		});
 
 		it('correct keyHash', async function () {
 			expect(
-				await this.generator.keyHash()
+				await this.generator.getKeyHash()
 			).to.equal(KEY_HASH);
 		});
 
 		it('correct subscriptionId', async function () {
 			expect(
-				await this.generator.subscriptionId()
+				await this.generator.getSubscriptionId()
 			).to.equal(SUBSCRIPTION_ID);
-		});
-
-		it('correct requestConfirmations', async function () {
-			expect(
-				await this.generator.requestConfirmations()
-			).to.equal(REQUEST_CONFIRMATIONS);
 		});
 
 		it('correct callbackGasLimit', async function () {
 			expect(
-				await this.generator.callbackGasLimit()
+				await this.generator.getCallbackGasLimit()
 			).to.equal(CALLBACK_GAS_LIMIT);
 		});
 	});
 
-	describe('requestRandom', function () {
-		it('non-controller revert', async function () {
-			await expect(
-				this.generator.connect(this.other).requestRandom(1)
-			).to.be.revertedWith(message.accessControlMissingRole);
-		});
-
-		it('controller success', async function () {
-			await this.generator.connect(this.owner).addController(this.other.address);
+	describe('_setKeyHash', function () {
+		it('value changed', async function () {
+			const keyHash = ethers.utils.formatBytes32String('new key hash');
+			await this.generator.setKeyHash(keyHash);
 			expect(
-				await this.generator.connect(this.other).callStatic.requestRandom(1)
+				await this.generator.getKeyHash()
+			).to.equal(keyHash);
+		});
+	});
+
+	describe('_setSubscriptionId', function () {
+		it('value changed', async function () {
+			await this.generator.setSubscriptionId(1);
+			expect(
+				await this.generator.getSubscriptionId()
+			).to.equal(1);
+		});
+	});
+
+	describe('_setCallbackGasLimit', function () {
+		it('value changed', async function () {
+			await this.generator.setCallbackGasLimit(0);
+			expect(
+				await this.generator.getCallbackGasLimit()
 			).to.equal(0);
 		});
-
-		it('paused revert', async function () {
-			await this.generator.connect(this.owner).addController(this.other.address);
-			await this.generator.connect(this.owner).setPaused(true);
-
-			await expect(
-				this.generator.connect(this.other).requestRandom(1)
-			).to.be.revertedWith(message.pausablePaused);
-		});
 	});
 
-	describe('setKeyHash', function () {
-		it('non-owner revert', async function () {
+	describe('_request', function () {
+		it('emits event', async function() {
 			await expect(
-				this.generator.connect(this.other).setKeyHash(ethers.utils.formatBytes32String('new key hash'))
-			).to.be.revertedWith(message.accessControlMissingRole);
+				this.generator.request(this.accounts[0], 1, 5)
+			).to.emit(this.generator, 'Requested');
 		});
 
-		it('owner success', async function () {
-			await this.generator.connect(this.owner).setKeyHash(ethers.utils.formatBytes32String('new key hash'));
-		});
-	});
-
-	describe('setSubscriptionId', function () {
-		it('non-owner revert', async function () {
-			await expect(
-				this.generator.connect(this.other).setSubscriptionId(1)
-			).to.be.revertedWith(message.accessControlMissingRole);
-		});
-
-		it('owner success', async function () {
-			await this.generator.connect(this.owner).setSubscriptionId(1);
-		});
-	});
-
-	describe('setRequestConfirmations', function () {
-		it('non-owner revert', async function () {
-			await expect(
-				this.generator.connect(this.other).setRequestConfirmations(1)
-			).to.be.revertedWith(message.accessControlMissingRole);
-		});
-
-		it('owner success', async function () {
-			await this.generator.connect(this.owner).setRequestConfirmations(1);
-		});
-	});
-
-	describe('setCallbackGasLimit', function () {
-		it('non-owner revert', async function () {
-			await expect(
-				this.generator.connect(this.other).setCallbackGasLimit(0)
-			).to.be.revertedWith(message.accessControlMissingRole);
-		});
-
-		it('owner success', async function () {
-			await this.generator.connect(this.owner).setCallbackGasLimit(0);
-		});
-	});
-
-	describe('addController', function () {
-		it('non-owner revert', async function () {
-			await expect(
-				this.generator.connect(this.other).addController(this.other.address)
-			).to.be.revertedWith(message.accessControlMissingRole);
-		});
-
-		it('owner success', async function () {
-			await this.generator.connect(this.owner).addController(this.other.address);
+		it('requestId maps to account', async function() {
+			await this.generator.request(this.accounts[0], 1, 5);
 			expect(
-				await this.generator.hasRole(this.generator.CONTROLLER_ROLE(), this.other.address)
-			).to.equal(true);
+				await this.generator.getRequest(0)
+			).to.equal(this.accounts[0]);
+		});
+
+		it('pending data set', async function() {
+			await this.generator.request(this.accounts[0], 1, 5);
+			let pending = await this.generator.getPending(this.accounts[0]);
+			expect(pending.base).to.equal(1);
+			expect(pending.count).to.equal(5);
+			expect(pending.random.length).to.equal(0);
+		});
+		
+		it('fulfill data update', async function() {
+			await this.generator.request(this.accounts[0], 1, 5);
+			await this.vrf.fulfillRequests();
+			let pending = await this.generator.getPending(this.accounts[0]);
+			expect(pending.base).to.equal(1);
+			expect(pending.count).to.equal(5);
+			expect(pending.random.length).to.equal(5);
+		});
+		
+		it('zero account revert', async function() {
+			await expect(
+				this.generator.request('0x0000000000000000000000000000000000000000', 1, 5)
+			).to.be.revertedWith('Invalid account');
+		});
+
+		it('zero base revert', async function() {
+			await expect(
+				this.generator.request(this.accounts[0], 0, 5)
+			).to.be.revertedWith('Invalid base');
+		});
+		
+		it('zero count revert', async function() {
+			await expect(
+				this.generator.request(this.accounts[0], 1, 0)
+			).to.be.revertedWith('Invalid count');
+		});
+		
+		it('existing pending revert', async function() {
+			await this.generator.request(this.accounts[0], 1, 5)
+			await expect(
+				this.generator.request(this.accounts[0], 1, 5)
+			).to.be.revertedWith('Account has pending mint');
 		});
 	});
+	
+	describe('_reveal', function () {
+		it('clears pending data', async function() {
+			await this.generator.request(this.accounts[0], 1, 5)
+			await this.vrf.fulfillRequests();
+			// Pending set
+			let pending = await this.generator.getPending(this.accounts[0]);
+			expect(pending.base).to.equal(1);
+			expect(pending.count).to.equal(5);
+			expect(pending.random.length).to.equal(5);
+			
+			await this.generator.reveal(this.accounts[0]);
+			// Pending cleared
+			pending = await this.generator.getPending(this.accounts[0]);
+			expect(pending.base).to.equal(0);
+			expect(pending.count).to.equal(0);
+			expect(pending.random.length).to.equal(0);
+		});
 
-	describe('removeController', function () {
-		it('non-owner revert', async function () {
-			await this.generator.connect(this.owner).addController(this.owner.address);
+		it('emits events', async function() {
+			await this.generator.request(this.accounts[0], 1, 5)
+			await this.vrf.fulfillRequests();
+			await expect(this.generator.reveal(this.accounts[0])).to
+			.emit(this.generator, 'Revealed').withArgs(this.accounts[0], 1).and
+			.emit(this.generator, 'Revealed').withArgs(this.accounts[0], 2).and
+			.emit(this.generator, 'Revealed').withArgs(this.accounts[0], 3).and
+			.emit(this.generator, 'Revealed').withArgs(this.accounts[0], 4).and
+			.emit(this.generator, 'Revealed').withArgs(this.accounts[0], 5);
+		});
+
+		it('no pending revert', async function() {
 			await expect(
-				this.generator.connect(this.other).removeController(this.owner.address)
-			).to.be.revertedWith(message.accessControlMissingRole);
+				this.generator.reveal(this.accounts[0])
+			).to.be.revertedWith('No pending mint');
 		});
 
-		it('owner success', async function () {
-			await this.generator.connect(this.owner).addController(this.other.address);
-			await this.generator.connect(this.owner).removeController(this.other.address);
-			expect(
-				await this.generator.hasRole(this.generator.CONTROLLER_ROLE(), this.other.address)
-			).to.equal(false);
-		});
-	});
-
-	describe('setPaused', function () {
-		it('non-owner revert', async function () {
+		it('not fulfilled revert', async function() {
+			await this.generator.request(this.accounts[0], 1, 5)
 			await expect(
-				this.generator.connect(this.other).setPaused(true)
-			).to.be.revertedWith(message.accessControlMissingRole);
+				this.generator.reveal(this.accounts[0])
+			).to.be.revertedWith('Reveal not ready');
 		});
 
-		it('owner success', async function () {
-			await this.generator.connect(this.owner).setPaused(true);
-			expect(await this.generator.paused()).to.equal(true);
-		});
 	});
 });

@@ -101,13 +101,10 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator {
 	// -- INTERNAL --
 
 	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
-		_generate(_tokenId, _seed);
+		tokens[_tokenId] = Token(
+			uint8(_seed % 256)
+		);
 		_safeMint(_msgSender(), _tokenId);
-	}
-
-
-	function _generate(uint256 _tokenId, uint256 _seed) internal {
-
 	}
 
 	// -- ADMIN --

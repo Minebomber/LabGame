@@ -17,8 +17,8 @@ abstract contract Generator is VRFConsumerBaseV2 {
 		uint256[] random;
 	}
 
-	mapping(uint256 => address) requests;
-	mapping(address => Mint) pending;
+	mapping(uint256 => address) internal requests;
+	mapping(address => Mint) internal pending;
 
 	event Requested(address indexed _account, uint256 _baseId, uint256 _count);
 	event Pending(address indexed _account, uint256 _baseId, uint256 _count);
@@ -73,6 +73,10 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	}
 
 	function _request(address _account, uint256 _base, uint256 _count) internal {
+		require(_account != address(0), "Invalid account");
+		require(pending[_account].base == 0, "Account has pending mint");
+		require(_base > 0, "Invalid base");
+		require(_count > 0, "Invalid count");
 		// Request random numbers for tokens, save request id to account
 		uint256 requestId = VRF_COORDINATOR.requestRandomWords(
 			keyHash,
@@ -90,7 +94,6 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	}
 
 	function _reveal(address _account) internal {
-		// Validate accounts pending mint
 		Mint memory mint = pending[_account];
 		require(mint.base > 0, "No pending mint");
 		require(mint.random.length > 0, "Reveal not ready");

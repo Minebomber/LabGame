@@ -102,38 +102,37 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 		// Validate tokenId and price
 		uint256 id = totalSupply();
 		require(id <= GEN3_MAX, "Sold out");
-
 		uint256 max = id + _amount;
-		uint256[4] memory GEN_MAX = [GEN0_MAX, GEN1_MAX, GEN2_MAX, GEN3_MAX];
-		uint256[4] memory GEN_PRICE = [GEN0_PRICE, GEN1_PRICE, GEN2_PRICE, GEN3_PRICE];
-		for (uint256 i; i < 4; i++) {
-			// Find generation of current mint
-			if (id < GEN_MAX[i]) {
-				require(max <= GEN_MAX[i], "Generation limit");
-				// Gen 0 costs ether
-				if (i == 0) require(msg.value >= _amount * GEN_PRICE[i], "Not enough ether");
-				// Other generations cost $SERUM
-				else {
-					// Generations 1 & 2 require tokens to be burned to mint
-					if (i < 3) {
-						// Validate & burn tokens
-						require(_burnIds.length == _amount, "Invalid tokens");
-						for (uint256 j; j < _burnIds.length; j++) {
-							require(ownerOf(_burnIds[j]) == _msgSender(), "Burn not owned");
-							require(tokens[_burnIds[j]].data & 3 == i - 1, "Must burn previous generation");
-							_burn(_burnIds[j]);
-						}
-						// Add burned tokens to tokenId offset
-						tokenOffset += _burnIds.length;
-					}
-					// Burn serum for mint
-					serum.burn(_msgSender(), _amount * GEN_PRICE[i]);
-				}
-				break;
+		uint256 generation;
+		if (id < GEN0_MAX) {
+			require(max <= GEN0_MAX, "Generation limit");
+			require(msg.value <= _amount * GEN0_PRICE);
+		} else if (id < GEN1_MAX) {
+			require(max <= GEN1_MAX, "Generation limit");
+			serum.burn(_msgSender(), _amount * GEN1_PRICE);
+			generation = 1;
+		} else if (id < GEN2_MAX) {
+			require(max <= GEN2_MAX, "Generation limit");
+			serum.burn(_msgSender(), _amount * GEN2_PRICE);
+			generation = 2;
+		} else if (id < GEN3_MAX) {
+			require(max <= GEN3_MAX, "Generation limit");
+			serum.burn(_msgSender(), _amount * GEN3_PRICE);
+			generation = 3;
+		}
+		// Burn tokens to mint gen 1 and 2
+		if (generation == 1 || generation == 2) {
+			require(_burnIds.length == _amount, "Invalid to burn tokens");
+			for (uint256 i; i < _burnIds.length; i++) {
+				require(_msgSender() == ownerOf(_burnIds[i]), "Burn token not owned");
+				require(tokens[_burnIds[i]].data & 3 == generation - 1, "Must burn previous generation");
+				_burn(_burnIds[i]);
 			}
+			tokenOffset += _burnIds.length;
 		}
 
 		_request(_msgSender(), id + 1, _amount);
+		tokenOffset += _amount;
 	}
 
 	/**
