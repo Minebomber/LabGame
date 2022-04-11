@@ -17,8 +17,8 @@ abstract contract Generator is VRFConsumerBaseV2 {
 		uint256[] random;
 	}
 
-	mapping(uint256 => address) internal requests;
-	mapping(address => Mint) internal pending;
+	mapping(uint256 => address) internal mintRequests;
+	mapping(address => Mint) internal pendingMints;
 
 	event Requested(address indexed _account, uint256 _baseId, uint256 _count);
 	event Pending(address indexed _account, uint256 _baseId, uint256 _count);
@@ -45,7 +45,7 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	}
 
 	modifier zeroPending(address _account) {
-		require(pending[_account].base == 0, "Account has pending mint");
+		require(pendingMints[_account].base == 0, "Account has pending mint");
 		_;
 	}
 
@@ -57,24 +57,24 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	 * @return Pending token base ID, amount of pending tokens
 	 */
 	function pendingOf(address _account) public view returns (uint256, uint256) {
-		return (pending[_account].base, pending[_account].random.length);
+		return (pendingMints[_account].base, pendingMints[_account].random.length);
 	}
 
 	// -- INTERNAL --
 
 	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
 		// Pop account for request
-		address account = requests[_requestId];
-		delete requests[_requestId];
+		address account = mintRequests[_requestId];
+		delete mintRequests[_requestId];
 		// Update pending mints with received random numbers
-		pending[account].random = _randomWords;
+		pendingMints[account].random = _randomWords;
 		// Ready to reveal
-		emit Pending(account, pending[account].base, _randomWords.length);
+		emit Pending(account, pendingMints[account].base, _randomWords.length);
 	}
 
 	function _request(address _account, uint256 _base, uint256 _count) internal {
 		require(_account != address(0), "Invalid account");
-		require(pending[_account].base == 0, "Account has pending mint");
+		require(pendingMints[_account].base == 0, "Account has pending mint");
 		require(_base > 0, "Invalid base");
 		require(_count > 0, "Invalid count");
 		// Request random numbers for tokens, save request id to account
@@ -85,19 +85,19 @@ abstract contract Generator is VRFConsumerBaseV2 {
 			callbackGasLimit,
 			uint32(_count)
 		);
-		requests[requestId] = _account;
+		mintRequests[requestId] = _account;
 		// Initialize pending mint with id and count
-		pending[_account].base = uint128(_base);
-		pending[_account].count = uint128(_count);
+		pendingMints[_account].base = uint128(_base);
+		pendingMints[_account].count = uint128(_count);
 		// Mint requested
 		emit Requested(_account, _base, _count);
 	}
 
 	function _reveal(address _account) internal {
-		Mint memory mint = pending[_account];
+		Mint memory mint = pendingMints[_account];
 		require(mint.base > 0, "No pending mint");
 		require(mint.random.length > 0, "Reveal not ready");
-		delete pending[_account];
+		delete pendingMints[_account];
 		// Generate all tokens
 		for (uint256 i; i < mint.count; i++) {
 			_revealToken(mint.base + i, mint.random[i]);

@@ -4,18 +4,15 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./Generator.sol";
+import "./abstract/Generator.sol";
+import "./interface/IClaimable.sol";
 
 import "./LabGame.sol";
 
-contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator {
+contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator, IClaimable {
 	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
-	struct Token {
-		uint8 rarity;
-	}
-
-	mapping (uint256 => Token) tokens;
+	mapping (uint256 => uint256) tokens;
 
 	uint256 tokenOffset;
 
@@ -42,6 +39,37 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator {
 
 	// -- EXTERNAL --
 
+	function claim() external override zeroPending(_msgSender()) {
+		uint256 amount;
+		uint256 count = labGame.balanceOf(_msgSender());
+		for (uint256 i; i < count; i++) {
+			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
+			LabGame.Token memory token = labGame.getToken(tokenId);
+			if (token.data == 131) {
+				amount += (block.timestamp - tokenClaims[tokenId]) / 2 days;
+				tokenClaims[tokenId] = block.timestamp;
+			}
+		}
+		amount += pendingClaims[_msgSender()];
+		delete pendingClaims[_msgSender()];
+		
+		_request(_msgSender(), totalSupply() + 1, amount);
+		tokenOffset += amount;
+	}
+
+	function pendingClaim(address _account) external view override returns (uint256 amount) {
+		uint256 count = labGame.balanceOf(_account);
+		for (uint256 i; i < count; i++) {
+			uint256 tokenId = labGame.tokenOfOwnerByIndex(_account, i);
+			LabGame.Token memory token = labGame.getToken(tokenId);
+			if (token.data == 131) {
+				amount += (block.timestamp - tokenClaims[tokenId]) / 2 days;
+			}
+		}
+		amount += pendingClaims[_account];
+	}
+
+
 	function reveal() external {
 		(, uint256 count) = pendingOf(_msgSender());
 		_reveal(_msgSender());
@@ -49,7 +77,7 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator {
 		tokenOffset -= count;
 	}
 
-	function getToken(uint256 _tokenId) external view returns (Token memory) {
+	function getToken(uint256 _tokenId) external view returns (uint256) {
 		require(_exists(_tokenId), "Token query for nonexistent token");
 		return tokens[_tokenId];
 	}
@@ -58,22 +86,8 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator {
 		return super.supportsInterface(_interfaceId);
 	}
 
-	// -- CONTROLLER --
-	// TODO: Internal
-	function mint(address _to, uint256 _amount) external onlyRole(CONTROLLER_ROLE) {
-		_request(_to, totalSupply() + 1, _amount);
-		tokenOffset += _amount;
-	}
-
 	function totalSupply() public view override returns (uint256) {
 		return ERC721Enumerable.totalSupply() + tokenOffset;
-	}
-
-	function claim() external zeroPending(_msgSender()) {
-		// Require no pending mints
-		// Scientist reward -> claim ( request randomness ) -> reveal
-		// TODO: Loop, calculate rewards, call mint
-		
 	}
 
 	// -- LABGAME -- 
@@ -88,11 +102,11 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator {
 	 * Only Gen 3 scientists are added
 	 * @param _tokenId ID of the token
 	 */
-	function initializeClaim(uint256 _tokenId) external onlyLabGame {
+	function initializeClaim(uint256 _tokenId) external override onlyLabGame {
 		tokenClaims[_tokenId] = block.timestamp;
 	}
 
-	function updateClaimFor(address _account, uint256 _tokenId) external onlyLabGame {
+	function updateClaimFor(address _account, uint256 _tokenId) external override onlyLabGame {
 		require(_account == labGame.ownerOf(_tokenId), "Token not owned");
 		pendingClaims[_account] += (block.timestamp - tokenClaims[_tokenId]) / 2 days;
 		tokenClaims[_tokenId] = block.timestamp;
@@ -101,9 +115,7 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator {
 	// -- INTERNAL --
 
 	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
-		tokens[_tokenId] = Token(
-			uint8(_seed % 256)
-		);
+		tokens[_tokenId] = _seed % 4;
 		_safeMint(_msgSender(), _tokenId);
 	}
 

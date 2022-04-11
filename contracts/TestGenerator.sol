@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "./Generator.sol";
+import "./abstract/Generator.sol";
 
 contract TestGenerator is Generator {
 
@@ -29,11 +29,11 @@ contract TestGenerator is Generator {
 	}
 
 	function getRequest(uint256 _key) public view returns (address) {
-		return requests[_key];
+		return mintRequests[_key];
 	}
 
 	function getPending(address _key) public view returns (Mint memory) {
-		return pending[_key];
+		return pendingMints[_key];
 	}
 
 	function setKeyHash(bytes32 _keyHash) public {

@@ -274,11 +274,31 @@ describe('LabGame', function () {
 	});
 	
 	describe('transferFrom', function () {
-
+		it('updates serum claim', async function () {
+			await this.labGame.connect(this.owner).setWhitelisted(false);
+			await this.labGame.connect(this.other).mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			expect(await this.labGame.ownerOf(1)).to.equal(this.other.address);
+			await expect(
+				this.labGame.connect(this.other).transferFrom(this.other.address, this.owner.address, 1)
+			).to.emit(this.serum, 'Updated');
+			expect(await this.labGame.ownerOf(1)).to.equal(this.owner.address);
+		});
 	});
 
 	describe('safeTransferFrom', function () {
-
+		it('updates serum claim', async function () {
+			await this.labGame.connect(this.owner).setWhitelisted(false);
+			await this.labGame.connect(this.other).mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.other).reveal();
+			expect(await this.labGame.ownerOf(1)).to.equal(this.other.address);
+			await expect(
+				this.labGame.connect(this.other).transferFrom(this.other.address, this.owner.address, 1)
+			).to.emit(this.serum, 'Updated');
+			expect(await this.labGame.ownerOf(1)).to.equal(this.owner.address);
+		});
 	});
 
 	describe('whitelistAdd', function () {

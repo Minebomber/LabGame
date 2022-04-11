@@ -4,13 +4,14 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./Generator.sol";
+import "./abstract/Generator.sol";
+import "./abstract/Whitelist.sol";
 
 import "./Serum.sol";
 import "./Metadata.sol";
 import "./Blueprint.sol";
 
-contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
+contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 
 	uint256 constant GEN0_PRICE = 0.06 ether;
 	uint256 constant GEN1_PRICE = 2_000 ether;
@@ -35,9 +36,6 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 		uint8 data;
 		uint8[9] trait;
 	}
-
-	bool whitelisted = true;
-	mapping(address => bool) whitelist;
 
 	mapping(uint256 => Token) tokens;
 	mapping(uint256 => uint256) hashes;
@@ -75,9 +73,12 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 		ERC721(_name, _symbol)
 		Generator(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit)
 	{
+
 		// Initialize contracts
 		serum = Serum(_serum);
 		metadata = Metadata(_metadata);
+
+		_setWhitelisted(true);
 
 		// Setup alias tables for random token generation
 		for (uint256 i; i < MAX_TRAITS; i++) {
@@ -216,15 +217,6 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 		ERC721.safeTransferFrom(_from, _to, _tokenId, _data);
 	}
 
-	/**
-	 * Check if a user account is whitelisted
-	 * @param _account Address of account to query
-	 * @return True/False if the account is whitelisted
-	 */
-	function isWhitelisted(address _account) public view returns (bool) {
-		return whitelist[_account];
-	}
-
 	// -- INTERNAL --
 
   /**
@@ -306,7 +298,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 	 * @param _account Address of account to add
 	 */
 	function whitelistAdd(address _account) external onlyOwner {
-		whitelist[_account] = true;
+		_whitelistAdd(_account);
 	}
 
 	/**
@@ -314,7 +306,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 	 * @param _account Address of account to remove
 	 */
 	function whitelistRemove(address _account) external onlyOwner {
-		whitelist[_account] = false;
+		_whitelistRemove(_account);
 	}
 
 	/**
@@ -322,7 +314,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator {
 	 * @param _whitelisted Whitelist state
 	 */
 	function setWhitelisted(bool _whitelisted) external onlyOwner {
-		whitelisted = _whitelisted;
+		_setWhitelisted(_whitelisted);
 	}
 
 	/**
