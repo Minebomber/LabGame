@@ -108,6 +108,11 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		if (id < GEN0_MAX) {
 			require(max <= GEN0_MAX, "Generation limit");
 			require(msg.value >= _amount * GEN0_PRICE, "Not enough ether");
+			require(
+				balanceOf(_msgSender()) + _amount <= 
+					(isWhitelisted(_msgSender()) ? MINT_LIMIT : 2 * MINT_LIMIT), 
+				"Account limit exceeded"
+			);
 		} else if (id < GEN1_MAX) {
 			require(max <= GEN1_MAX, "Generation limit");
 			serum.burn(_msgSender(), _amount * GEN1_PRICE);
