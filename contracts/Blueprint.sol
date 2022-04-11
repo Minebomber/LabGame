@@ -2,15 +2,19 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./abstract/Generator.sol";
 import "./interface/IClaimable.sol";
+import "@openzeppelin/contracts/utils/Base64.sol";
 
 import "./LabGame.sol";
 
-contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator, IClaimable {
-	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
+contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable {
+	using Base64 for bytes;
+	using Strings for uint256;
+
+	string constant DESCRIPTION = "Blueprint description";
 
 	mapping (uint256 => uint256) tokens;
 
@@ -33,7 +37,6 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator, ICla
 		ERC721(_name, _symbol)
 		Generator(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit)
 	{
-		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 		labGame = LabGame(_labGame);
 	}
 
@@ -82,12 +85,28 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator, ICla
 		return tokens[_tokenId];
 	}
 
-	function supportsInterface(bytes4 _interfaceId) public view virtual override(ERC721Enumerable, AccessControl) returns (bool) {
-		return super.supportsInterface(_interfaceId);
-	}
-
 	function totalSupply() public view override returns (uint256) {
 		return ERC721Enumerable.totalSupply() + tokenOffset;
+	}
+
+	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
+		require(_exists(_tokenId), "URI query for nonexistent token");
+		string[4] memory RARITY_NAMES = [
+			"Common",
+			"Uncommon",
+			"Rare",
+			"Legendary"
+		];
+		uint256 rarity = tokens[_tokenId];
+		return string(abi.encodePacked(
+			'data:application/json;base64,',
+			abi.encodePacked(
+				'{"name":"', RARITY_NAMES[rarity], ' Blueprint #', _tokenId.toString(),
+				'","description":"', DESCRIPTION,
+				'","image":"data:image/svg+xml;base64,', //TODO: Image
+				'","attributes":[{"trait_type":"Rarity","value":"', RARITY_NAMES[rarity],'"}]}'
+			).encode()
+		));
 	}
 
 	// -- LABGAME -- 
@@ -122,26 +141,10 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator, ICla
 	// -- ADMIN --
 
 	/**
-	 * Add address as a controller
-	 * @param _controller controller address
-	 */
-	function addController(address _controller) external onlyRole(DEFAULT_ADMIN_ROLE) {
-		grantRole(CONTROLLER_ROLE, _controller);
-	}
-
-	/**
-	 * Remove address as a controller
-	 * @param _controller controller address
-	 */
-	function removeController(address _controller) external onlyRole(DEFAULT_ADMIN_ROLE) {
-		revokeRole(CONTROLLER_ROLE, _controller);
-	}
-
-	/**
 	 * Set paused state
 	 * @param _state pause state
 	 */
-	function setPaused(bool _state) external onlyRole(DEFAULT_ADMIN_ROLE) {
+	function setPaused(bool _state) external onlyOwner {
 		if (_state)	_pause();
 		else        _unpause();
 	}
@@ -150,7 +153,7 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator, ICla
 	 * Set the VRF key hash
 	 * @param _keyHash New keyHash
 	 */
-	function setKeyHash(bytes32 _keyHash) external onlyRole(DEFAULT_ADMIN_ROLE) {
+	function setKeyHash(bytes32 _keyHash) external onlyOwner {
 		_setKeyHash(_keyHash);
 	}
 
@@ -158,7 +161,7 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator, ICla
 	 * Set the VRF subscription ID
 	 * @param _subscriptionId New subscriptionId
 	 */
-	function setSubscriptionId(uint64 _subscriptionId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+	function setSubscriptionId(uint64 _subscriptionId) external onlyOwner {
 		_setSubscriptionId(_subscriptionId);
 	}
 
@@ -166,7 +169,7 @@ contract Blueprint is ERC721Enumerable, AccessControl, Pausable, Generator, ICla
 	 * Set the VRF callback gas limit
 	 * @param _callbackGasLimit New callbackGasLimit
 	 */
-	function setCallbackGasLimit(uint32 _callbackGasLimit) external onlyRole(DEFAULT_ADMIN_ROLE) {
+	function setCallbackGasLimit(uint32 _callbackGasLimit) external onlyOwner {
 		_setCallbackGasLimit(_callbackGasLimit);
 	}
 }

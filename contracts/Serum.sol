@@ -196,7 +196,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 		}
 		return _amount;
 	}
-	// MARK: CONTROLLER
+
 	// -- CONTROLLER --
 
 	/**
