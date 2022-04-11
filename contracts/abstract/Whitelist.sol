@@ -16,12 +16,14 @@ abstract contract Whitelist {
 	}
 
 	function _whitelistAdd(address _account) internal {
+		require(_account != address(0), "Invalid account");
 		require(whitelist[_account] == 0, "Account already whitelisted");
 		whitelist[_account] = block.timestamp;
 	}
 
 	function _whitelistRemove(address _account) internal {
+		require(_account != address(0), "Invalid account");
 		require(whitelist[_account] > 0, "Account not whitelisted");
-		whitelist[_account] = 0;
+		delete whitelist[_account];
 	}
 }

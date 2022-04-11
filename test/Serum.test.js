@@ -67,7 +67,7 @@ describe('Serum', function () {
 		it('no owned revert', async function () {
 			await expect(
 				this.serum.claim()
-			).to.be.revertedWith('No owned tokens');
+			).to.be.revertedWith('Nothing to claim');
 		});
 	});
 

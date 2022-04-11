@@ -51,6 +51,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	function claim() external override {
 		// Verify owned tokens
 		uint256 count = labGame.balanceOf(_msgSender());
+		require(count > 0 || pendingClaims[_msgSender()] > 0, "Nothing to claim");
 		uint256 amount;
 		// Iterate wallet for scientists
 		for (uint256 i; i < count; i++) {
