@@ -14,6 +14,8 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	using Base64 for bytes;
 	using Strings for uint256;
 
+	uint256 constant MAX_SUPPLY = 5000;
+
 	//uint256 constant CLAIM_PERIOD = 2 days;
 	uint256 constant CLAIM_PERIOD = 30 seconds;
  
@@ -46,20 +48,29 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	// -- EXTERNAL --
 
 	function claim() external override zeroPending(_msgSender()) {
+		uint256 supply = totalSupply();
+		require(supply < MAX_SUPPLY, "Blueprint mint limit reached");
+		// Calculate earned blueprints
 		uint256 amount;
 		uint256 count = labGame.balanceOf(_msgSender());
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
 			LabGame.Token memory token = labGame.getToken(tokenId);
+			// Only Gen3 scientists are claimed
 			if (token.data == 3) {
 				amount += (block.timestamp - tokenClaims[tokenId]) / CLAIM_PERIOD;
 				tokenClaims[tokenId] = block.timestamp;
 			}
 		}
+		// Include pending
 		amount += pendingClaims[_msgSender()];
 		delete pendingClaims[_msgSender()];
-		
-		_request(_msgSender(), totalSupply() + 1, amount);
+		// Verify 0 < amount < remaining supply
+		require(amount > 0, "Nothing to claim");
+		if (MAX_SUPPLY - supply < amount)
+			amount = MAX_SUPPLY - supply;
+		// Request blueprint mint
+		_request(_msgSender(), supply + 1, amount);
 		tokenOffset += amount;
 	}
 

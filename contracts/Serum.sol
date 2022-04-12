@@ -51,9 +51,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	 * Claim rewards for owned tokens
 	 */
 	function claim() external override {
-		// Verify owned tokens
 		uint256 count = labGame.balanceOf(_msgSender());
-		require(count > 0 || pendingClaims[_msgSender()] > 0, "Nothing to claim");
 		uint256 amount;
 		// Iterate wallet for scientists
 		for (uint256 i; i < count; i++) {
@@ -74,12 +72,12 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 				amount += _claimMutant(tokenId, token.data & 3);
 		}
 		// Include pending claim balance
-		uint256 pending = pendingClaims[_msgSender()];
+		amount += pendingClaims[_msgSender()];
 		delete pendingClaims[_msgSender()];
-		// Mint
-		_mint(_msgSender(), amount + pending);
-
-		emit Claimed(_msgSender(), amount + pending);
+		// Verify amount and mint
+		require(amount > 0, "Nothing to claim");
+		_mint(_msgSender(), amount);
+		emit Claimed(_msgSender(), amount);
 	}
 
 	/**

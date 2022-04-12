@@ -99,7 +99,6 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		require(tx.origin == _msgSender(), "Only EOA");
 		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
 		if (whitelisted) require(isWhitelisted(_msgSender()), "Not whitelisted");
-		
 		// Validate tokenId and price
 		uint256 id = totalSupply();
 		require(id <= GEN3_MAX, "Sold out");
@@ -136,7 +135,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 			}
 			tokenOffset += _burnIds.length;
 		}
-
+		// Request token mint
 		_request(_msgSender(), id + 1, _amount);
 		tokenOffset += _amount;
 	}
@@ -196,12 +195,13 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 * @param _tokenId ID of token being transferred
 	 */
 	function transferFrom(address _from, address _to, uint256 _tokenId) public override (ERC721, IERC721) {
-		// Add token claim to pending
+		// Update blueprint claim for gen3 scientists
 		if (tokens[_tokenId].data == 3)
 			blueprint.updateClaim(_from, _tokenId);
+		// Other tokens update serum claim
 		else
 			serum.updateClaim(_from, _tokenId);
-
+		// Perform transfer
 		ERC721.transferFrom(_from, _to, _tokenId);
 	}
 
@@ -213,12 +213,13 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 * @param _data Transfer data
 	 */
 	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) public override (ERC721, IERC721) {
-		// Add token claim to pending
+		// Update blueprint claim for gen3 scientists
 		if (tokens[_tokenId].data == 3)
 			blueprint.updateClaim(_from, _tokenId);
+		// Other tokens update serum claim
 		else
 			serum.updateClaim(_from, _tokenId);
-
+		// Perform transfer
 		ERC721.safeTransferFrom(_from, _to, _tokenId, _data);
 	}
 
