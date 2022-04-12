@@ -124,9 +124,16 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 		}
 	}
 
+	/**
+	 * Claim token and save in owners pending balance before token transfer
+	 * @param _account Owner of token
+	 * @param _tokenId Token ID
+	 */
 	function updateClaim(address _account, uint256 _tokenId) external override onlyLabGame {
+		// Verify ownership
 		require(_account == labGame.ownerOf(_tokenId), "Token not owned");
 		uint256 amount;
+		// Claim the token
 		LabGame.Token memory token = labGame.getToken(_tokenId);
 		if ((token.data & 128) != 0) {
 			amount = _claimMutant(_tokenId, token.data & 3);
@@ -134,6 +141,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 			amount = _claimScientist(_tokenId, token.data & 3);
 			amount = _payTax(amount);
 		}
+		// Save to pending balance
 		pendingClaims[_account] += amount;
 		emit Updated(_account, _tokenId);
 	}

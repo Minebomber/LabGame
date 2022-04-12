@@ -107,9 +107,14 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		if (id < GEN0_MAX) {
 			require(max <= GEN0_MAX, "Generation limit");
 			require(msg.value >= _amount * GEN0_PRICE, "Not enough ether");
+			//TODO: Update
+			// If whitelist on => MINT_LIMIT
+			// If whitelist off:
+			//   if account whitelisted => 2 * MINT_LIMIT
+			//   if account not whitelisted => MINT_LIMIT
 			require(
 				balanceOf(_msgSender()) + _amount <= 
-					(isWhitelisted(_msgSender()) ? MINT_LIMIT : 2 * MINT_LIMIT), 
+					(!whitelisted && isWhitelisted(_msgSender()) ? 2 * MINT_LIMIT : MINT_LIMIT), 
 				"Account limit exceeded"
 			);
 		} else if (id < GEN1_MAX) {
@@ -150,6 +155,11 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		tokenOffset -= count;
 	}
 
+	/**
+	 * Generate and mint pending token using random seed
+	 * @param _tokenId Token ID to reveal
+	 * @param _seed Random seed
+	 */
 	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
 		// Select traits and mint token
 		Token memory token = _generate(_tokenId, _seed);

@@ -30,6 +30,16 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	mapping(uint256 => uint256) public tokenClaims;
 	mapping(address => uint256) public pendingClaims; 
 
+	/**
+	 * Blueprint constructor
+	 * @param _name ERC721 name
+	 * @param _symbol ERC721 symbol
+	 * @param _labGame LabGame contract address
+	 * @param _vrfCoordinator VRF Coordinator address
+	 * @param _keyHash Gas lane key hash
+	 * @param _subscriptionId VRF subscription id
+	 * @param _callbackGasLimit VRF callback gas limit
+	 */
 	constructor(
 		string memory _name,
 		string memory _symbol,
@@ -47,6 +57,9 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 
 	// -- EXTERNAL --
 
+	/**
+	 * Claim scientist rewards and request blueprint mint
+	 */
 	function claim() external override zeroPending(_msgSender()) {
 		uint256 supply = totalSupply();
 		require(supply < MAX_SUPPLY, "Blueprint mint limit reached");
@@ -74,35 +87,64 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		tokenOffset += amount;
 	}
 
+	/**
+	 * Calculate pending blueprint rewards
+	 * @param _account Account to query pending claim for
+	 * @return amount Amount of claimable serum
+	 */
 	function pendingClaim(address _account) external view override returns (uint256 amount) {
+		// Loop over owned tokens
 		uint256 count = labGame.balanceOf(_account);
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_account, i);
 			LabGame.Token memory token = labGame.getToken(tokenId);
+			// Only Gen3 scientists are included
 			if (token.data == 3) {
 				amount += (block.timestamp - tokenClaims[tokenId]) / CLAIM_PERIOD;
 			}
 		}
+		// Include pending claims
 		amount += pendingClaims[_account];
+		// Cap pending count at MAX_SUPPLY blueprints
+		uint256 supply = totalSupply();
+		if (MAX_SUPPLY - supply < amount)
+			amount = MAX_SUPPLY - supply;
 	}
 
-
+	/**
+	 * Reveal pending blueprint mints
+	 */
 	function reveal() external {
+		// Save count
 		(, uint256 count) = pendingOf(_msgSender());
 		_reveal(_msgSender());
 		// Tokens minted, update offset
 		tokenOffset -= count;
 	}
 
+	/**
+	 * Get the data of a token
+	 * @param _tokenId Token ID to query
+	 * @return Token rarity
+	 */
 	function getToken(uint256 _tokenId) external view returns (uint256) {
 		require(_exists(_tokenId), "Token query for nonexistent token");
 		return tokens[_tokenId];
 	}
 
+	/**
+	 * Override supply to include pending and burned mints
+	 * @return total minted + pending + burned as supply
+	 */
 	function totalSupply() public view override returns (uint256) {
 		return ERC721Enumerable.totalSupply() + tokenOffset;
 	}
 
+	/**
+	 * Get the metadata uri for a token
+	 * @param _tokenId Token ID to query
+	 * @return Token metadata URI
+	 */
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
 		require(_exists(_tokenId), "URI query for nonexistent token");
 		string[4] memory RARITY_NAMES = [
@@ -139,14 +181,27 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		tokenClaims[_tokenId] = block.timestamp;
 	}
 
+	/**
+	 * Claim token and save in owners pending balance before token transfer
+	 * @param _account Owner of token
+	 * @param _tokenId Token ID
+	 */
 	function updateClaim(address _account, uint256 _tokenId) external override onlyLabGame {
+		// Verify ownership
 		require(_account == labGame.ownerOf(_tokenId), "Token not owned");
+		// Update pending balance
 		pendingClaims[_account] += (block.timestamp - tokenClaims[_tokenId]) / CLAIM_PERIOD;
+		// Claim token
 		tokenClaims[_tokenId] = block.timestamp;
 	}
 
 	// -- INTERNAL --
 
+	/**
+	 * Generate and mint pending token using random seed
+	 * @param _tokenId Token ID to reveal
+	 * @param _seed Random seed
+	 */
 	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
 		// 60% Common, 30% Uncommon, 9% Rare, 1% Legendary
 		uint8[4] memory rarities = [204, 255, 92, 10];
