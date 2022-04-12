@@ -20,6 +20,8 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	uint256 constant GEN2_TAX = 150; // 12.5%
 	uint256 constant GEN3_TAX = 200; // 12.5%
 
+	uint256 constant CLAIM_PERIOD = 1 days;
+
 	mapping(uint256 => uint256) tokenClaims; // tokenId => value
 
 	uint256[4] mutantEarnings;
@@ -58,8 +60,8 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
 			LabGame.Token memory token = labGame.getToken(tokenId);
 			// Claim only Gen 0-2 scientists
-			if ((token.data & 128) == 0 && (token.data & 3) < 3) {
-				amount += _claimScientist(tokenId, token.data & 3);
+			if (token.data < 3) {
+				amount += _claimScientist(tokenId, token.data);
 			}
 		}
 		// Pay mutant tax
@@ -91,15 +93,13 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_account, i);
 			LabGame.Token memory token = labGame.getToken(tokenId);
-			if ((token.data & 128) == 0) {
-				if ((token.data & 3) == 3) continue;
+			if ((token.data & 128) != 0)
+				amount += mutantEarnings[token.data & 3] - tokenClaims[tokenId];
+			else if (token.data < 3)
 				untaxed +=
 					(block.timestamp - tokenClaims[tokenId]) * 
 					[ GEN0_RATE, GEN1_RATE, GEN2_RATE, 0 ][token.data & 3] / 
-					1 days;
-			} else {
-				amount += mutantEarnings[token.data & 3] - tokenClaims[tokenId];
-			}
+					CLAIM_PERIOD;
 		}
 		amount += _pendingTax(untaxed);
 		amount += pendingClaims[_account];
@@ -118,24 +118,23 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	 */
 	function initializeClaim(uint256 _tokenId) external override onlyLabGame {
 		LabGame.Token memory token = labGame.getToken(_tokenId);
-		if ((token.data & 128) == 0) {
-			if ((token.data & 3) < 3)
-				tokenClaims[_tokenId] = block.timestamp;
-		} else {
+		if ((token.data & 128) != 0) {
 			tokenClaims[_tokenId] = mutantEarnings[token.data & 3];
 			mutantCounts[token.data & 3]++;
+		} else if (token.data < 3) {
+			tokenClaims[_tokenId] = block.timestamp;
 		}
 	}
 
-	function updateClaimFor(address _account, uint256 _tokenId) external override onlyLabGame {
+	function updateClaim(address _account, uint256 _tokenId) external override onlyLabGame {
 		require(_account == labGame.ownerOf(_tokenId), "Token not owned");
 		uint256 amount;
 		LabGame.Token memory token = labGame.getToken(_tokenId);
-		if ((token.data & 128) == 0) {
+		if ((token.data & 128) != 0) {
+			amount = _claimMutant(_tokenId, token.data & 3);
+		} else if (token.data < 3) {
 			amount = _claimScientist(_tokenId, token.data & 3);
 			amount = _payTax(amount);
-		} else {
-			amount = _claimMutant(_tokenId, token.data & 3);
 		}
 		pendingClaims[_account] += amount;
 		emit Updated(_account, _tokenId);
@@ -150,7 +149,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	 * @return amount Amount of serum/blueprints for this token
 	 */
 	function _claimScientist(uint256 _tokenId, uint256 _generation) internal returns (uint256 amount) {
-		amount = (block.timestamp - tokenClaims[_tokenId]) * [ GEN0_RATE, GEN1_RATE, GEN2_RATE ][_generation] / 1 days;
+		amount = (block.timestamp - tokenClaims[_tokenId]) * [ GEN0_RATE, GEN1_RATE, GEN2_RATE ][_generation] / CLAIM_PERIOD;
 		tokenClaims[_tokenId] = block.timestamp;
 	}
 	

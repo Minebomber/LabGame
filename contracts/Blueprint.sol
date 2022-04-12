@@ -14,16 +14,19 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	using Base64 for bytes;
 	using Strings for uint256;
 
+	//uint256 constant CLAIM_PERIOD = 2 days;
+	uint256 constant CLAIM_PERIOD = 30 seconds;
+ 
 	string constant DESCRIPTION = "Blueprint description";
 
 	mapping (uint256 => uint256) tokens;
 
-	uint256 tokenOffset;
+	uint256 public tokenOffset;
 
 	LabGame labGame;
 
-	mapping(uint256 => uint256) tokenClaims;
-	mapping(address => uint256) pendingClaims; 
+	mapping(uint256 => uint256) public tokenClaims;
+	mapping(address => uint256) public pendingClaims; 
 
 	constructor(
 		string memory _name,
@@ -48,8 +51,8 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
 			LabGame.Token memory token = labGame.getToken(tokenId);
-			if (token.data == 131) {
-				amount += (block.timestamp - tokenClaims[tokenId]) / 2 days;
+			if (token.data == 3) {
+				amount += (block.timestamp - tokenClaims[tokenId]) / CLAIM_PERIOD;
 				tokenClaims[tokenId] = block.timestamp;
 			}
 		}
@@ -65,8 +68,8 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_account, i);
 			LabGame.Token memory token = labGame.getToken(tokenId);
-			if (token.data == 131) {
-				amount += (block.timestamp - tokenClaims[tokenId]) / 2 days;
+			if (token.data == 3) {
+				amount += (block.timestamp - tokenClaims[tokenId]) / CLAIM_PERIOD;
 			}
 		}
 		amount += pendingClaims[_account];
@@ -125,16 +128,20 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		tokenClaims[_tokenId] = block.timestamp;
 	}
 
-	function updateClaimFor(address _account, uint256 _tokenId) external override onlyLabGame {
+	function updateClaim(address _account, uint256 _tokenId) external override onlyLabGame {
 		require(_account == labGame.ownerOf(_tokenId), "Token not owned");
-		pendingClaims[_account] += (block.timestamp - tokenClaims[_tokenId]) / 2 days;
+		pendingClaims[_account] += (block.timestamp - tokenClaims[_tokenId]) / CLAIM_PERIOD;
 		tokenClaims[_tokenId] = block.timestamp;
 	}
 
 	// -- INTERNAL --
 
 	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
-		tokens[_tokenId] = _seed % 4;
+		// 60% Common, 30% Uncommon, 9% Rare, 1% Legendary
+		uint8[4] memory rarities = [204, 255, 92, 10];
+		uint8[4] memory aliases = [1, 0, 0, 0];
+		uint256 i = (_seed & 0xFF) % 4;
+		tokens[_tokenId] = (((_seed >> 8) & 0xFF) < rarities[i]) ? i : aliases[i];
 		_safeMint(_msgSender(), _tokenId);
 	}
 

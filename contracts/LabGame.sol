@@ -156,7 +156,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		Token memory token = _generate(_tokenId, _seed);
 		_safeMint(_msgSender(), _tokenId);
 		// Setup serum claim for the token
-		if (token.data == 131)
+		if (token.data == 3)
 			blueprint.initializeClaim(_tokenId);
 		else
 			serum.initializeClaim(_tokenId);
@@ -197,10 +197,10 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 */
 	function transferFrom(address _from, address _to, uint256 _tokenId) public override (ERC721, IERC721) {
 		// Add token claim to pending
-		if (tokens[_tokenId].data == 131)
-			blueprint.updateClaimFor(_from, _tokenId);
+		if (tokens[_tokenId].data == 3)
+			blueprint.updateClaim(_from, _tokenId);
 		else
-			serum.updateClaimFor(_from, _tokenId);
+			serum.updateClaim(_from, _tokenId);
 
 		ERC721.transferFrom(_from, _to, _tokenId);
 	}
@@ -214,10 +214,10 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 */
 	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) public override (ERC721, IERC721) {
 		// Add token claim to pending
-		if (tokens[_tokenId].data == 131)
-			blueprint.updateClaimFor(_from, _tokenId);
+		if (tokens[_tokenId].data == 3)
+			blueprint.updateClaim(_from, _tokenId);
 		else
-			serum.updateClaimFor(_from, _tokenId);
+			serum.updateClaim(_from, _tokenId);
 
 		ERC721.safeTransferFrom(_from, _to, _tokenId, _data);
 	}
