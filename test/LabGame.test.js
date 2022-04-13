@@ -121,6 +121,21 @@ describe('LabGame', function () {
 				)
 			).to.emit(this.labGame, 'Requested');
 		});
+		
+		it('totalSupply includes pending', async function () {
+			await this.labGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
+			expect(
+				await this.labGame.totalSupply()
+			).to.equal(0);
+			await this.labGame.connect(this.accounts[3]).whitelistMint(
+				2,
+				["0x8a3552d60a98e0ade765adddad0a2e420ca9b1eef5f326ba7ab860bb4ea72c94","0x070e8db97b197cc0e4a1790c5e6c3667bab32d733db7f815fbe84f5824c7168d","0x90a5fdc765808e5a2e0d816f52f09820c5f167703ce08d078eb87e2c194c5525","0x6957015e8f4c2643fefe1967a4f73da161b800b8cb45e6e469217aac4d0fe5f6"],
+				{ value: ethers.utils.parseEther('0.12') }
+			);
+			expect(
+				await this.labGame.totalSupply()
+			).to.equal(2);
+		});
 
 		it('has pending revert', async function () {
 			await this.labGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
@@ -205,6 +220,32 @@ describe('LabGame', function () {
 			expect(
 				await this.labGame.totalSupply()
 			).to.equal(2);
+		});
+
+		it('account limit revert', async function () {
+			await this.labGame.connect(this.accounts[1]).mint(2, [], { value: ethers.utils.parseEther('0.12') })
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.accounts[1]).reveal();
+			await expect(
+				this.labGame.connect(this.accounts[1]).mint(2, [], { value: ethers.utils.parseEther('0.12') })
+			).to.be.revertedWith('Account limit exceeded');
+		});
+
+		it('whitelist mint and regular mint success', async function () {
+			await this.labGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
+			await this.labGame.connect(this.accounts[3]).whitelistMint(
+				2,
+				["0x8a3552d60a98e0ade765adddad0a2e420ca9b1eef5f326ba7ab860bb4ea72c94","0x070e8db97b197cc0e4a1790c5e6c3667bab32d733db7f815fbe84f5824c7168d","0x90a5fdc765808e5a2e0d816f52f09820c5f167703ce08d078eb87e2c194c5525","0x6957015e8f4c2643fefe1967a4f73da161b800b8cb45e6e469217aac4d0fe5f6"],
+				{ value: ethers.utils.parseEther('0.12') }
+			);
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.accounts[3]).reveal();
+			expect(await this.labGame.balanceOf(this.accounts[3].address)).to.equal(2);
+			await this.labGame.disableWhitelist();
+			await this.labGame.connect(this.accounts[3]).mint(2, [], { value: ethers.utils.parseEther('0.12') })
+			await this.vrf.fulfillRequests();
+			await this.labGame.connect(this.accounts[3]).reveal();
+			expect(await this.labGame.balanceOf(this.accounts[3].address)).to.equal(4);
 		});
 
 		it('generation limit revert', async function () {
