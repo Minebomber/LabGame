@@ -73,7 +73,6 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		ERC721(_name, _symbol)
 		Generator(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit)
 	{
-
 		// Initialize contracts
 		serum = Serum(_serum);
 		metadata = Metadata(_metadata);

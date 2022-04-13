@@ -17,12 +17,14 @@ abstract contract Whitelist {
 	}
 
 	function _enableWhitelist(bytes32 _merkleRoot) internal {
+		require(!whitelisted, "Whitelist already enabled");
 		merkleRoot = _merkleRoot;
 		whitelisted = true;
 		emit WhitelistEnabled();
 	}
 
 	function _disableWhitelist() internal {
+		require(whitelisted, "Whitelist not enabled");
 		delete merkleRoot;
 		delete whitelisted;
 		emit WhitelistDisabled();

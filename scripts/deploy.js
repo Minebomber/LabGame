@@ -51,8 +51,9 @@ async function main() {
 	await Serum.addController(LabGame.address);
 	await Serum.setLabGame(LabGame.address);
 	await Metadata.setLabGame(LabGame.address);
-	await LabGame.setWhitelisted(false);
 	await LabGame.setBlueprint(Blueprint.address);
+	// Whitelist for accounts 0-9
+	await LabGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
 
 	for (let i = 0; i < 17; i++) {
 		await Metadata.setTraits(i, [
