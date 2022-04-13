@@ -123,36 +123,52 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		require(id < GEN3_MAX, "Sold out");
 		uint256 max = id + _amount;
 		uint256 generation;
+
+		// Generation 0
 		if (id < GEN0_MAX) {
 			require(max <= GEN0_MAX, "Generation limit");
 			require(msg.value >= _amount * GEN0_PRICE, "Not enough ether");
+			// Account limit of MINT_LIMIT not including whitelist mints
 			require(
 				balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount <= MINT_LIMIT, 
 				"Account limit exceeded"
 			);
+
+		// Generation 1
 		} else if (id < GEN1_MAX) {
 			require(max <= GEN1_MAX, "Generation limit");
 			serum.burn(_msgSender(), _amount * GEN1_PRICE);
 			generation = 1;
+
+		// Generation 2
 		} else if (id < GEN2_MAX) {
 			require(max <= GEN2_MAX, "Generation limit");
 			serum.burn(_msgSender(), _amount * GEN2_PRICE);
 			generation = 2;
+
+		// Generation 3
 		} else if (id < GEN3_MAX) {
 			require(max <= GEN3_MAX, "Generation limit");
 			serum.burn(_msgSender(), _amount * GEN3_PRICE);
-			generation = 3;
 		}
+
 		// Burn tokens to mint gen 1 and 2
 		if (generation == 1 || generation == 2) {
 			require(_burnIds.length == _amount, "Invalid burn tokens");
 			for (uint256 i; i < _burnIds.length; i++) {
+				// Verify token to be burned
 				require(_msgSender() == ownerOf(_burnIds[i]), "Burn token not owned");
 				require(tokens[_burnIds[i]].data & 3 == generation - 1, "Must burn previous generation");
 				_burn(_burnIds[i]);
 			}
+			// Add burned tokens to id offset
 			tokenOffset += _burnIds.length;
+
+		// Generation 0 & 3 no burn needed
+		} else {
+			require(_burnIds.length == 0, "No burn tokens needed");
 		}
+		
 		// Request token mint
 		_request(_msgSender(), id + 1, _amount);
 		tokenOffset += _amount;
