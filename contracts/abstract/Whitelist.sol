@@ -1,29 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+
 abstract contract Whitelist {
 	bool public whitelisted;
-	mapping (address => uint256) whitelist;
+	bytes32 internal merkleRoot;
+
+	event WhitelistEnabled();
+	event WhitelistDisabled();
 
 	constructor() {}
 
-	function isWhitelisted(address _account) public view returns (bool) {
-		return whitelist[_account] > 0;
+	function _whitelisted(address _account, bytes32[] calldata _merkleProof) internal view returns (bool) {
+		return MerkleProof.verify(_merkleProof, merkleRoot, keccak256(abi.encodePacked(_account)));
 	}
 
-	function _setWhitelisted(bool _whitelisted) internal {
-		whitelisted = _whitelisted;
+	function _enableWhitelist(bytes32 _merkleRoot) internal {
+		merkleRoot = _merkleRoot;
+		whitelisted = true;
+		emit WhitelistEnabled();
 	}
 
-	function _whitelistAdd(address _account) internal {
-		require(_account != address(0), "Invalid account");
-		require(whitelist[_account] == 0, "Account already whitelisted");
-		whitelist[_account] = block.timestamp;
-	}
-
-	function _whitelistRemove(address _account) internal {
-		require(_account != address(0), "Invalid account");
-		require(whitelist[_account] > 0, "Account not whitelisted");
-		delete whitelist[_account];
+	function _disableWhitelist() internal {
+		delete merkleRoot;
+		delete whitelisted;
+		emit WhitelistDisabled();
 	}
 }

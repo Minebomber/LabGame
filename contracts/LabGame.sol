@@ -78,8 +78,6 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		serum = Serum(_serum);
 		metadata = Metadata(_metadata);
 
-		_setWhitelisted(true);
-
 		// Setup alias tables for random token generation
 		for (uint256 i; i < MAX_TRAITS; i++) {
 			rarities[i] = [255, 170, 85, 85];
@@ -94,11 +92,12 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 * @param _amount Number of tokens to mint
 	 * @param _burnIds Token Ids to burn as payment (for gen 1 & 2)
 	 */
-	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused zeroPending(_msgSender()) {
+	function mint(uint256 _amount, bytes32[] calldata _merkleProof, uint256[] calldata _burnIds) external payable whenNotPaused zeroPending(_msgSender()) {
 		// Validate msgSender & amount
 		require(tx.origin == _msgSender(), "Only EOA");
 		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
-		if (whitelisted) require(isWhitelisted(_msgSender()), "Not whitelisted");
+		bool isWhitelisted = _whitelisted(_msgSender(), _merkleProof);
+		if (whitelisted) require(isWhitelisted, "Not whitelisted");
 		// Validate tokenId and price
 		uint256 id = totalSupply();
 		require(id <= GEN3_MAX, "Sold out");
@@ -114,7 +113,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 			//   if account not whitelisted => MINT_LIMIT
 			require(
 				balanceOf(_msgSender()) + _amount <= 
-					(!whitelisted && isWhitelisted(_msgSender()) ? 2 * MINT_LIMIT : MINT_LIMIT), 
+					(!whitelisted && isWhitelisted ? 2 * MINT_LIMIT : MINT_LIMIT), 
 				"Account limit exceeded"
 			);
 		} else if (id < GEN1_MAX) {
@@ -310,27 +309,18 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	// -- OWNER --
 
 	/**
-	 * Add a user account to the whitelist
-	 * @param _account Address of account to add
+	 * Enable the whitelist
+	 * @param _merkleRoot Root hash of the whitelist merkle tree
 	 */
-	function whitelistAdd(address _account) external onlyOwner {
-		_whitelistAdd(_account);
+	function enableWhitelist(bytes32 _merkleRoot) external onlyOwner {
+		_enableWhitelist(_merkleRoot);
 	}
 
 	/**
-	 * Remove a user account from the whitelist
-	 * @param _account Address of account to remove
+	 * Disable the whitelist
 	 */
-	function whitelistRemove(address _account) external onlyOwner {
-		_whitelistRemove(_account);
-	}
-
-	/**
-	 * Set whitelisted state
-	 * @param _whitelisted Whitelist state
-	 */
-	function setWhitelisted(bool _whitelisted) external onlyOwner {
-		_setWhitelisted(_whitelisted);
+	function disableWhitelist() external onlyOwner {
+		_disableWhitelist();
 	}
 
 	/**

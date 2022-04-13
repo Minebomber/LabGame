@@ -6,15 +6,15 @@ import "./abstract/Whitelist.sol";
 contract TestWhitelist is Whitelist {
 	constructor() {}
 
-	function setWhitelisted(bool _whitelisted) external {
-		_setWhitelisted(_whitelisted);
+	function whitelisted(address _account, bytes32[] calldata _merkleProof) external returns (bool) {
+		return _whitelisted(_account, _merkleProof);
 	}
 
-	function whitelistAdd(address _account) external {
-		_whitelistAdd(_account);
+	function enableWhitelist(bytes32 _merkleRoot) external {
+		_enableWhitelist(_merkleRoot);
 	}
 
-	function whitelistRemove(address _account) external {
-		_whitelistRemove(_account);
+	function disableWhitelist() external {
+		_disableWhitelist();
 	}
 }
