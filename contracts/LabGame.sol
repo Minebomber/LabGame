@@ -39,6 +39,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 
 	mapping(uint256 => Token) tokens;
 	mapping(uint256 => uint256) hashes;
+	mapping(address => uint256) whitelistMints;
 
 	uint256 tokenOffset;
 
@@ -87,32 +88,46 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	// -- EXTERNAL --
 
 	/**
+	 * Mint Gen0 scientists & mutants for whitelisted accounts
+	 * @param _amount Number of tokens to mint
+	 * @param _merkleProof Merkle proof to verify whitelisted account
+	 */
+	function whitelistMint(uint256 _amount, bytes32[] calldata _merkleProof) external payable whenNotPaused zeroPending(_msgSender()) {
+		// Verify account & amount
+		require(whitelisted, "Whitelist not enabled");
+		require(_whitelisted(_msgSender(), _merkleProof), "Account not whitelisted");
+		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
+		require(balanceOf(_msgSender()) + _amount <= MINT_LIMIT, "Account limit exceeded");
+		// Verify generation
+		uint256 id = totalSupply();
+		require(id < GEN0_MAX, "Generation 0 sold out");
+		require(id + _amount <= GEN0_MAX, "Generation limit");
+		require(msg.value >= _amount * GEN0_PRICE, "Not enough ether");
+		// Request token mint
+		_request(_msgSender(), id + 1, _amount);
+		tokenOffset += _amount;
+		whitelistMints[_msgSender()] += _amount;
+	}
+
+	/**
 	 * Mint scientists & mutants
 	 * @param _amount Number of tokens to mint
 	 * @param _burnIds Token Ids to burn as payment (for gen 1 & 2)
 	 */
-	function mint(uint256 _amount, bytes32[] calldata _merkleProof, uint256[] calldata _burnIds) external payable whenNotPaused zeroPending(_msgSender()) {
-		// Validate msgSender & amount
-		require(tx.origin == _msgSender(), "Only EOA");
+	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused zeroPending(_msgSender()) {
+		require(!whitelisted, "Whitelist is enabled");
+		// Verify amount
 		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
-		bool isWhitelisted = _whitelisted(_msgSender(), _merkleProof);
-		if (whitelisted) require(isWhitelisted, "Not whitelisted");
-		// Validate tokenId and price
+		// Verify generation and price
 		uint256 id = totalSupply();
-		require(id <= GEN3_MAX, "Sold out");
+		require(id < GEN3_MAX, "Sold out");
 		uint256 max = id + _amount;
 		uint256 generation;
 		if (id < GEN0_MAX) {
 			require(max <= GEN0_MAX, "Generation limit");
 			require(msg.value >= _amount * GEN0_PRICE, "Not enough ether");
-			//TODO: Update
-			// If whitelist on => MINT_LIMIT
-			// If whitelist off:
-			//   if account whitelisted => 2 * MINT_LIMIT
-			//   if account not whitelisted => MINT_LIMIT
 			require(
-				balanceOf(_msgSender()) + _amount <= 
-					(!whitelisted && isWhitelisted ? 2 * MINT_LIMIT : MINT_LIMIT), 
+				balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount <= MINT_LIMIT, 
 				"Account limit exceeded"
 			);
 		} else if (id < GEN1_MAX) {
