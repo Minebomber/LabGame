@@ -12,7 +12,6 @@ import "./Metadata.sol";
 import "./Blueprint.sol";
 
 contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
-
 	uint256 constant GEN0_PRICE = 0.06 ether;
 	uint256 constant GEN1_PRICE = 2_000 ether;
 	uint256 constant GEN2_PRICE = 10_000 ether;

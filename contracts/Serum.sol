@@ -22,12 +22,12 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 
 	uint256 constant CLAIM_PERIOD = 1 days;
 
-	mapping(uint256 => uint256) tokenClaims; // tokenId => value
+	mapping(uint256 => uint256) public tokenClaims; // tokenId => value
 
 	uint256[4] mutantEarnings;
 	uint256[4] mutantCounts;
 
-	mapping(address => uint256) pendingClaims; 
+	mapping(address => uint256) public pendingClaims; 
 
 	LabGame public labGame;
 

@@ -15,6 +15,10 @@ const deploy = async (name, ...args) => {
 	return contract;
 };
 
+const increaseTime = async (seconds) => {
+	return waffle.provider.send('evm_increaseTime', [seconds]);
+};
+
 const message = {
 	accessControlMissingRole: /AccessControl: account .* is missing role .*/,
 	ownableNotOwner: 'Ownable: caller is not the owner',
@@ -27,5 +31,6 @@ Object.assign(exports, {
 	snapshot,
 	restore,
 	deploy,
+	increaseTime,
 	message,
 });

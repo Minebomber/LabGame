@@ -499,4 +499,53 @@ describe('LabGame', function () {
 			expect(await this.labGame.paused()).to.equal(true);
 		});
 	});
+
+	describe('setBlueprint', function () {
+		it('non-owner revert', async function () {
+			await expect(
+				this.labGame.connect(this.accounts[1]).setBlueprint(this.vrf.address)
+			).to.be.revertedWith(message.ownableNotOwner);
+		});
+
+		it('owner success', async function () {
+			await this.labGame.connect(this.accounts[0]).setBlueprint(this.vrf.address);
+			expect(await this.labGame.blueprint()).to.equal(this.vrf.address);
+		});
+	});
+
+	describe('setKeyHash', function () {
+		it('non-owner revert', async function () {
+			await expect(
+				this.labGame.connect(this.accounts[1]).setKeyHash(ethers.utils.formatBytes32String('new key hash'))
+			).to.be.revertedWith(message.ownableNotOwner);
+		});
+
+		it('owner success', async function () {
+			await this.labGame.connect(this.accounts[0]).setKeyHash(ethers.utils.formatBytes32String('new key hash'));
+		});
+	});
+
+	describe('setSubscriptionId', function () {
+		it('non-owner revert', async function () {
+			await expect(
+				this.labGame.connect(this.accounts[1]).setSubscriptionId(1)
+			).to.be.revertedWith(message.ownableNotOwner);
+		});
+
+		it('owner success', async function () {
+			await this.labGame.connect(this.accounts[0]).setSubscriptionId(1);
+		});
+	});
+
+	describe('setCallbackGasLimit', function () {
+		it('non-owner revert', async function () {
+			await expect(
+				this.labGame.connect(this.accounts[1]).setCallbackGasLimit(1)
+			).to.be.revertedWith(message.ownableNotOwner);
+		});
+
+		it('owner success', async function () {
+			await this.labGame.connect(this.accounts[0]).setCallbackGasLimit(1);
+		});
+	});
 });

@@ -16,16 +16,15 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 
 	uint256 constant MAX_SUPPLY = 5000;
 
-	//uint256 constant CLAIM_PERIOD = 2 days;
-	uint256 constant CLAIM_PERIOD = 30 seconds;
+	uint256 constant CLAIM_PERIOD = 2 days;
  
 	string constant DESCRIPTION = "Blueprint description";
 
 	mapping (uint256 => uint256) tokens;
 
-	uint256 public tokenOffset;
+	uint256 tokenOffset;
 
-	LabGame labGame;
+	LabGame public labGame;
 
 	mapping(uint256 => uint256) public tokenClaims;
 	mapping(address => uint256) public pendingClaims; 
@@ -62,7 +61,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	 */
 	function claim() external override zeroPending(_msgSender()) {
 		uint256 supply = totalSupply();
-		require(supply < MAX_SUPPLY, "Blueprint mint limit reached");
+		require(supply < MAX_SUPPLY, "Mint limit reached");
 		// Calculate earned blueprints
 		uint256 amount;
 		uint256 count = labGame.balanceOf(_msgSender());
