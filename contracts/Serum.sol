@@ -50,7 +50,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	/**
 	 * Claim rewards for owned tokens
 	 */
-	function claim() external override {
+	function claim() external override whenNotPaused {
 		uint256 count = labGame.balanceOf(_msgSender());
 		uint256 amount;
 		// Iterate wallet for scientists
@@ -115,7 +115,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	 * Setup the intial value for a new token
 	 * @param _tokenId ID of the token
 	 */
-	function initializeClaim(uint256 _tokenId) external override onlyLabGame {
+	function initializeClaim(uint256 _tokenId) external override onlyLabGame whenNotPaused {
 		LabGame.Token memory token = labGame.getToken(_tokenId);
 		if ((token.data & 128) != 0) {
 			tokenClaims[_tokenId] = mutantEarnings[token.data & 3];
@@ -130,7 +130,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	 * @param _account Owner of token
 	 * @param _tokenId Token ID
 	 */
-	function updateClaim(address _account, uint256 _tokenId) external override onlyLabGame {
+	function updateClaim(address _account, uint256 _tokenId) external override onlyLabGame whenNotPaused {
 		// Verify ownership
 		require(_account == labGame.ownerOf(_tokenId), "Token not owned");
 		uint256 amount;
