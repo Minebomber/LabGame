@@ -75,8 +75,8 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	function _request(address _account, uint256 _base, uint256 _count) internal {
 		require(_account != address(0), "Invalid account");
 		require(pendingMints[_account].base == 0, "Account has pending mint");
-		require(_base > 0, "Invalid base");
-		require(_count > 0, "Invalid count");
+		require(_base != 0, "Invalid base");
+		require(_count != 0, "Invalid count");
 		// Request random numbers for tokens, save request id to account
 		uint256 requestId = VRF_COORDINATOR.requestRandomWords(
 			keyHash,
@@ -95,8 +95,8 @@ abstract contract Generator is VRFConsumerBaseV2 {
 
 	function _reveal(address _account) internal {
 		Mint memory mint = pendingMints[_account];
-		require(mint.base > 0, "No pending mint");
-		require(mint.random.length > 0, "Reveal not ready");
+		require(mint.base != 0, "No pending mint");
+		require(mint.random.length != 0, "Reveal not ready");
 		delete pendingMints[_account];
 		// Generate all tokens
 		for (uint256 i; i < mint.count; i++) {

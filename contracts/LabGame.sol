@@ -95,7 +95,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		// Verify account & amount
 		require(whitelisted, "Whitelist not enabled");
 		require(_whitelisted(_msgSender(), _merkleProof), "Account not whitelisted");
-		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
+		require(_amount != 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
 		require(balanceOf(_msgSender()) + _amount <= MINT_LIMIT, "Account limit exceeded");
 		// Verify generation
 		uint256 id = totalSupply();
@@ -116,7 +116,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused zeroPending(_msgSender()) {
 		require(!whitelisted, "Whitelist is enabled");
 		// Verify amount
-		require(_amount > 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
+		require(_amount != 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
 		// Verify generation and price
 		uint256 id = totalSupply();
 		require(id < GEN3_MAX, "Sold out");

@@ -75,7 +75,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 		amount += pendingClaims[_msgSender()];
 		delete pendingClaims[_msgSender()];
 		// Verify amount and mint
-		require(amount > 0, "Nothing to claim");
+		require(amount != 0, "Nothing to claim");
 		_mint(_msgSender(), amount);
 		emit Claimed(_msgSender(), amount);
 	}
@@ -106,6 +106,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	// -- LABGAME -- 
 
 	modifier onlyLabGame {
+		require(address(labGame) != address(0), "LabGame not ready");
 		require(_msgSender() == address(labGame), "Not authorized");
 		_;
 	}

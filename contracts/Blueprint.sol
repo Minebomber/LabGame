@@ -8,7 +8,9 @@ import "./abstract/Generator.sol";
 import "./interface/IClaimable.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 
+import "./Serum.sol";
 import "./LabGame.sol";
+import "./Laboratory.sol";
 
 contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable {
 	using Base64 for bytes;
@@ -24,7 +26,9 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 
 	uint256 tokenOffset;
 
+	Serum public serum;
 	LabGame public labGame;
+	Laboratory public laboratory;
 
 	mapping(uint256 => uint256) public tokenClaims;
 	mapping(address => uint256) public pendingClaims; 
@@ -42,6 +46,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	constructor(
 		string memory _name,
 		string memory _symbol,
+		address _serum,
 		address _labGame,
 		address _vrfCoordinator,
 		bytes32 _keyHash,
@@ -51,6 +56,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		ERC721(_name, _symbol)
 		Generator(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit)
 	{
+		serum = Serum(_serum);
 		labGame = LabGame(_labGame);
 	}
 
@@ -78,7 +84,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		amount += pendingClaims[_msgSender()];
 		delete pendingClaims[_msgSender()];
 		// Verify 0 < amount < remaining supply
-		require(amount > 0, "Nothing to claim");
+		require(amount != 0, "Nothing to claim");
 		if (MAX_SUPPLY - supply < amount)
 			amount = MAX_SUPPLY - supply;
 		// Request blueprint mint
@@ -89,7 +95,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	/**
 	 * Calculate pending blueprint rewards
 	 * @param _account Account to query pending claim for
-	 * @return amount Amount of claimable serum
+	 * @return amount Amount of claimable blueprints
 	 */
 	function pendingClaim(address _account) external view override returns (uint256 amount) {
 		// Loop over owned tokens
@@ -119,6 +125,16 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		_reveal(_msgSender());
 		// Tokens minted, update offset
 		tokenOffset -= count;
+	}
+
+	function build(uint256 _tokenId) external {
+		require(address(laboratory) != address(0), "Laboratory not ready");
+		require(_msgSender() == ownerOf(_tokenId), "Token not owned");
+		uint256 rarity = tokens[_tokenId];
+		serum.burn(_msgSender(), [50_000, 75_000, 100_000, 150_000][rarity]);
+		_burn(_tokenId);
+		delete tokens[_tokenId];
+		laboratory.mint(_msgSender(), rarity);
 	}
 
 	/**
@@ -211,6 +227,10 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	}
 
 	// -- ADMIN --
+
+	function setLaboratory(address _laboratory) external onlyOwner {
+		laboratory = Laboratory(_laboratory);
+	}
 
 	/**
 	 * Set paused state
