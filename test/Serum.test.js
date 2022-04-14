@@ -4,6 +4,7 @@ const {
 	snapshot,
 	restore,
 	deploy,
+	impersonateAccount,
 	message,
 } = require('./util');
 
@@ -79,19 +80,47 @@ describe('Serum', function () {
 		});
 	});
 
-	describe('initializeClaim', function() {
-		it('non-LabGame revert', async function() {
+	describe('initializeClaim', function () {
+		it('non-LabGame revert', async function () {
+			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+
 			await expect(
 				this.serum.initializeClaim(0)
 			).to.be.revertedWith('Not authorized');
 		});
+
+		it('LabGame success', async function () {
+			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+
+			await impersonateAccount(this.labGame.address);
+			await this.serum.connect(await ethers.getSigner(this.labGame.address)).initializeClaim(1);
+			expect(await this.serum.tokenClaims(1)).to.not.equal(0);
+		});
 	});
 
-	describe('updateClaimFor', function() {
-		it('non-LabGame revert', async function() {
+	describe('updateClaimFor', function () {
+		it('non-LabGame revert', async function () {
+			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+
 			await expect(
 				this.serum.initializeClaim(0)
 			).to.be.revertedWith('Not authorized');
+		});
+
+		it('LabGame success', async function () {
+			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+
+			await impersonateAccount(this.labGame.address);
+			await this.serum.connect(await ethers.getSigner(this.labGame.address)).updateClaim(this.owner.address, 1);
+			expect(await this.serum.tokenClaims(1)).to.not.equal(0);
 		});
 	});
 

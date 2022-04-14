@@ -19,6 +19,10 @@ const increaseTime = async (seconds) => {
 	return waffle.provider.send('evm_increaseTime', [seconds]);
 };
 
+const impersonateAccount = async (address) => {
+	return waffle.provider.send('hardhat_impersonateAccount', [address]);
+};
+
 const message = {
 	accessControlMissingRole: /AccessControl: account .* is missing role .*/,
 	ownableNotOwner: 'Ownable: caller is not the owner',
@@ -32,5 +36,6 @@ Object.assign(exports, {
 	restore,
 	deploy,
 	increaseTime,
+	impersonateAccount,
 	message,
 });

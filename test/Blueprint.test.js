@@ -5,6 +5,7 @@ const {
 	restore,
 	deploy,
 	increaseTime,
+	impersonateAccount,
 	message,
 } = require('./util');
 
@@ -136,15 +137,39 @@ describe('Blueprint', function () {
 	});
 
 	describe('reveal', function () {
+		it('no pending revert', async function () {
+			await expect(this.blueprint.reveal()).to.be.revertedWith('No pending mint');
+		});
 
+		it('not ready revert', async function () {
+			await increaseTime(172800);
+			await this.blueprint.claim();
+			await expect(this.blueprint.reveal()).to.be.revertedWith('Reveal not ready');
+		});
 	});
 
 	describe('initializeClaim', function () {
-
+		it('non-LabGame revert', async function () {
+			await expect(this.blueprint.initializeClaim(1)).to.be.revertedWith('Not authorized');
+		});
+		
+		it('LabGame success', async function () {
+			await impersonateAccount(this.labGame.address);
+			await this.blueprint.connect(await ethers.getSigner(this.labGame.address)).initializeClaim(1);
+			expect(await this.blueprint.tokenClaims(1)).to.not.equal(0);
+		});
 	});
 
 	describe('updateClaim', function () {
-
+		it('non-LabGame revert', async function () {
+			await expect(this.blueprint.updateClaim(this.accounts[0].address, 12)).to.be.revertedWith('Not authorized');
+		});
+		
+		it('LabGame success', async function () {
+			await impersonateAccount(this.labGame.address);
+			await this.blueprint.connect(await ethers.getSigner(this.labGame.address)).updateClaim(this.accounts[0].address, 12);
+			expect(await this.blueprint.tokenClaims(12)).to.not.equal(0);
+		});
 	});
 
 	describe('setPaused', function () {
