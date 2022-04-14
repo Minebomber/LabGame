@@ -133,6 +133,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		uint256 rarity = tokens[_tokenId];
 		serum.burn(_msgSender(), [50_000, 75_000, 100_000, 150_000][rarity]);
 		_burn(_tokenId);
+		tokenOffset += 1;
 		delete tokens[_tokenId];
 		laboratory.mint(_msgSender(), rarity);
 	}
