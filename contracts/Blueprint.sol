@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "./abstract/Generator.sol";
 import "./interface/IClaimable.sol";
-import "@openzeppelin/contracts/utils/Base64.sol";
+import "@openzeppelin/contracts-upgradeable/utils/Base64Upgradeable.sol";
 
 import "./Serum.sol";
 import "./LabGame.sol";
@@ -19,8 +19,8 @@ error DoesNotExist(uint256 _tokenId);
 error NotAuthorized(address _sender);
 
 contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, Generator, IClaimable {
-	using Base64 for bytes;
-	using Strings for uint256;
+	using Base64Upgradeable for bytes;
+	using StringsUpgradeable for uint256;
 
 	uint256 constant MAX_MINTED = 5000;
 

@@ -1,4 +1,4 @@
-const { ethers, waffle } = require('hardhat');
+const { ethers, waffle, upgrades } = require('hardhat');
 
 const snapshot = async () => {
   return waffle.provider.send('evm_snapshot', [])
@@ -10,7 +10,7 @@ const restore = async (snapshotId) => {
 
 const deploy = async (name, ...args) => {
 	const factory = await ethers.getContractFactory(name);
-	const contract = await factory.deploy(...args);
+	const contract = await upgrades.deployProxy(factory, [...args]);
 	await contract.deployed();
 	return contract;
 };

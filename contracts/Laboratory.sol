@@ -4,8 +4,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/utils/Base64.sol";
+import "@openzeppelin/contracts-upgradeable/utils/Base64Upgradeable.sol";
 
 import "./Blueprint.sol";
 
@@ -13,8 +12,8 @@ import "./Blueprint.sol";
 //error NotAuthorized(address _sender);
 
 contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable {
-	using Base64 for bytes;
-	using Strings for uint256;
+	using Base64Upgradeable for bytes;
+	using StringsUpgradeable for uint256;
 
 	string constant DESCRIPTION = "Laboratory description";
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
 
 error WhitelistIsEnabled();
 error WhitelistNotEnabled();
@@ -14,7 +14,7 @@ abstract contract Whitelist {
 	event WhitelistDisabled();
 
 	function _whitelisted(address _account, bytes32[] calldata _merkleProof) internal view returns (bool) {
-		return MerkleProof.verify(_merkleProof, merkleRoot, keccak256(abi.encodePacked(_account)));
+		return MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, keccak256(abi.encodePacked(_account)));
 	}
 
 	function _enableWhitelist(bytes32 _merkleRoot) internal {

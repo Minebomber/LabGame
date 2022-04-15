@@ -103,7 +103,7 @@ describe('Blueprint', function () {
 
 	describe('claim', function () {
 		it('no gen3 owned revert', async function() {
-			await expect(this.blueprint.connect(this.accounts[1]).claim()).to.be.revertedWith('Nothing to claim');
+			await expect(this.blueprint.connect(this.accounts[1]).claim()).to.be.revertedWith('AcountHasNoPendingMint("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")');
 		});
 		
 		it('nothing to claim revert', async function() {
@@ -139,11 +139,11 @@ describe('Blueprint', function () {
 
 	describe('reveal', function () {
 		it('no pending revert', async function () {
-			await expect(this.blueprint.reveal()).to.be.revertedWith('No pending mint');
+			await expect(this.blueprint.reveal()).to.be.revertedWith('AcountHasNoPendingMint("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")');
 		});
 
 		it('not ready revert', async function () {
-			await increaseTime(172800);
+			await increaseTime(172801);
 			await this.blueprint.claim();
 			await expect(this.blueprint.reveal()).to.be.revertedWith('Reveal not ready');
 		});

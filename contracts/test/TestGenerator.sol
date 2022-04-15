@@ -5,12 +5,14 @@ import "../abstract/Generator.sol";
 
 contract TestGenerator is Generator {
 
-	/*constructor(
+	function initialize(
 		address _vrfCoordinator,
 		bytes32 _keyHash,
 		uint64 _subscriptionId,
 		uint32 _callbackGasLimit
-	)	Generator(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit) {}*/
+	) public initializer {
+		__Generator_init(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit);
+	}
 
 	function getVrfCoordinator() public view returns (address) {
 		return address(VRF_COORDINATOR);
