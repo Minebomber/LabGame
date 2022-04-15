@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 
 import "./Blueprint.sol";
@@ -11,7 +12,7 @@ import "./Blueprint.sol";
 //error DoesNotExist(uint256 _tokenId);
 //error NotAuthorized(address _sender);
 
-contract Laboratory is ERC721Enumerable, Ownable, Pausable {
+contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable {
 	using Base64 for bytes;
 	using Strings for uint256;
 
@@ -26,13 +27,14 @@ contract Laboratory is ERC721Enumerable, Ownable, Pausable {
 
 	Blueprint blueprint;
 	
-	constructor(
+	function initialize(
 		string memory _name,
 		string memory _symbol,
 		address _blueprint
-	)
-		ERC721(_name, _symbol)
-	{
+	) public initializer {
+		__ERC721_init(_name, _symbol);
+		__Ownable_init();
+		__Pausable_init();
 		blueprint = Blueprint(_blueprint);
 	}
 

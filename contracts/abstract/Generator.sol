@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "./VRFConsumerBaseV2Upgradable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 error AccountHasPendingMint(address _account);
 error AcountHasNoPendingMint(address _account);
@@ -12,8 +12,8 @@ error InvalidRequestBase();
 error InvalidRequestCount();
 error RevealNotReady();
 
-abstract contract Generator is VRFConsumerBaseV2 {
-	VRFCoordinatorV2Interface immutable internal VRF_COORDINATOR;
+abstract contract Generator is VRFConsumerBaseV2Upgradable {
+	VRFCoordinatorV2Interface internal VRF_COORDINATOR;
 	bytes32 internal keyHash;
 	uint64 internal subscriptionId;
 	uint32 internal callbackGasLimit;
@@ -38,12 +38,13 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	 * @param _subscriptionId VRF subscription id
 	 * @param _callbackGasLimit VRF callback gas limit
 	 */
-	constructor(
+	function __Generator_init(
 		address _vrfCoordinator,
 		bytes32 _keyHash,
 		uint64 _subscriptionId,
 		uint32 _callbackGasLimit
-	) VRFConsumerBaseV2(_vrfCoordinator) {
+	) internal onlyInitializing {
+		__VRFConsumerBaseV2_init(_vrfCoordinator);
 		VRF_COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
 		keyHash = _keyHash;
 		subscriptionId = _subscriptionId;

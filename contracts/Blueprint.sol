@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "./abstract/Generator.sol";
 import "./interface/IClaimable.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
@@ -18,7 +18,7 @@ error NotOwned(address _account, uint256 _tokenId);
 error DoesNotExist(uint256 _tokenId);
 error NotAuthorized(address _sender);
 
-contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable {
+contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, Generator, IClaimable {
 	using Base64 for bytes;
 	using Strings for uint256;
 
@@ -49,7 +49,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	 * @param _subscriptionId VRF subscription id
 	 * @param _callbackGasLimit VRF callback gas limit
 	 */
-	constructor(
+	function initialize(
 		string memory _name,
 		string memory _symbol,
 		address _serum,
@@ -58,10 +58,12 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		bytes32 _keyHash,
 		uint64 _subscriptionId,
 		uint32 _callbackGasLimit
-	)
-		ERC721(_name, _symbol)
-		Generator(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit)
-	{
+	) public initializer {
+		__ERC721_init(_name, _symbol);
+		__Ownable_init();
+		__Pausable_init();
+		__Generator_init(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit);
+		
 		serum = Serum(_serum);
 		labGame = LabGame(_labGame);
 	}

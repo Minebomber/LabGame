@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "./LabGame.sol";
@@ -9,7 +9,7 @@ import "./LabGame.sol";
 error InvalidTrait(uint256 _trait);
 error ZeroAddress();
 
-contract Metadata is Ownable {
+contract Metadata is OwnableUpgradeable {
 	using Strings for uint256;
 	using Base64 for bytes;
 
@@ -30,7 +30,9 @@ contract Metadata is Ownable {
 
 	LabGame labGame;
 
-	constructor() {}
+	function initialize() public initializer {
+		__Ownable_init();
+	}
 
 	// -- EXTERNAL --
 

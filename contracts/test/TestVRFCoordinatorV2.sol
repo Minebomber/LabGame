@@ -15,8 +15,6 @@ contract TestVRFCoordinatorV2  {
 
 	event Requested(address indexed sender, uint32 numWords);
 
-	constructor() {}
-
   function addConsumer(uint64 subId, address consumer) external {}
 	
 	function requestRandomWords(

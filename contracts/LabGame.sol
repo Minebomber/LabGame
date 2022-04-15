@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "./abstract/Generator.sol";
 import "./abstract/Whitelist.sol";
 
@@ -22,7 +22,7 @@ error BurnNotOwned(address _sender, uint256 _tokenId);
 error InvalidBurnGeneration(uint256 _given, uint256 _expected);
 //error DoesNotExist(uint256 _tokenId);
 
-contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
+contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, Generator, Whitelist {
 	uint256 constant GEN0_PRICE = 0.06 ether;
 	uint256 constant GEN1_PRICE = 2_000 ether;
 	uint256 constant GEN2_PRICE = 10_000 ether;
@@ -71,7 +71,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 * @param _subscriptionId VRF subscription id
 	 * @param _callbackGasLimit VRF callback gas limit
 	 */
-	constructor(
+	function initialize(
 		string memory _name,
 		string memory _symbol,
 		address _serum,
@@ -80,10 +80,11 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		bytes32 _keyHash,
 		uint64 _subscriptionId,
 		uint32 _callbackGasLimit
-	) 
-		ERC721(_name, _symbol)
-		Generator(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit)
-	{
+	) public initializer {
+		__ERC721_init(_name, _symbol);
+		__Ownable_init();
+		__Pausable_init();
+		__Generator_init(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit);
 		// Initialize contracts
 		serum = Serum(_serum);
 		metadata = Metadata(_metadata);
@@ -237,7 +238,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 * @param _to New owner address
 	 * @param _tokenId ID of token being transferred
 	 */
-	function transferFrom(address _from, address _to, uint256 _tokenId) public override (ERC721, IERC721) {
+	function transferFrom(address _from, address _to, uint256 _tokenId) public override (ERC721Upgradeable, IERC721Upgradeable)  {
 		// Update blueprint claim for gen3 scientists
 		if (tokens[_tokenId].data == 3)
 			blueprint.updateClaim(_from, _tokenId);
@@ -245,7 +246,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		else
 			serum.updateClaim(_from, _tokenId);
 		// Perform transfer
-		ERC721.transferFrom(_from, _to, _tokenId);
+		ERC721Upgradeable.transferFrom(_from, _to, _tokenId);
 	}
 
 	/**
@@ -255,7 +256,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 * @param _tokenId ID of token being transferred
 	 * @param _data Transfer data
 	 */
-	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) public override (ERC721, IERC721) {
+	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) public override (ERC721Upgradeable, IERC721Upgradeable) {
 		// Update blueprint claim for gen3 scientists
 		if (tokens[_tokenId].data == 3)
 			blueprint.updateClaim(_from, _tokenId);
@@ -263,7 +264,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		else
 			serum.updateClaim(_from, _tokenId);
 		// Perform transfer
-		ERC721.safeTransferFrom(_from, _to, _tokenId, _data);
+		ERC721Upgradeable.safeTransferFrom(_from, _to, _tokenId, _data);
 	}
 
 	// -- INTERNAL --

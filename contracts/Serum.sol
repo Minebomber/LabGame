@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "./interface/IClaimable.sol";
 
 import "./LabGame.sol";
@@ -12,7 +12,7 @@ error NotReady();
 //error NotAuthorized(address _sender);
 //error NotOwned(uint256 _tokenId);
 
-contract Serum is ERC20, AccessControl, Pausable, IClaimable {
+contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeable, IClaimable {
 	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 	
 	uint256 constant GEN0_RATE = 1000 ether;
@@ -40,12 +40,13 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	 * @param _name ERC20 token name
 	 * @param _symbol ERC20 token symbol
 	 */
-	constructor(
+	function initialize(
 		string memory _name,
 		string memory _symbol
-	)
-		ERC20(_name, _symbol)
-	{
+	) public initializer {
+		__ERC20_init(_name, _symbol);
+		__AccessControl_init();
+		__Pausable_init();
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 	}
 

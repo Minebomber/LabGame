@@ -13,8 +13,6 @@ abstract contract Whitelist {
 	event WhitelistEnabled();
 	event WhitelistDisabled();
 
-	constructor() {}
-
 	function _whitelisted(address _account, bytes32[] calldata _merkleProof) internal view returns (bool) {
 		return MerkleProof.verify(_merkleProof, merkleRoot, keccak256(abi.encodePacked(_account)));
 	}

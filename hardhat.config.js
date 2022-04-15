@@ -1,5 +1,6 @@
 require('@nomiclabs/hardhat-waffle');
 require('hardhat-contract-sizer');
+require('@openzeppelin/hardhat-upgrades');
 
 module.exports = {
   solidity: {

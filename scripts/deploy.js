@@ -1,9 +1,9 @@
-const { storageLayout } = require("hardhat");
+const { upgrades } = require("hardhat");
 
 async function deployContract(name, ...args) {
 	const factory = await ethers.getContractFactory(name);
 	console.log(`Deploying ${name}...`);
-	const contract = await factory.deploy(...args);
+	const contract = await upgrades.deployProxy(factory, [...args]);
 	await contract.deployed();
 	console.log(`${name} deployed to ${contract.address}`);
 	return contract;
