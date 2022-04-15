@@ -10,6 +10,9 @@ abstract contract Whitelist {
 	event WhitelistEnabled();
 	event WhitelistDisabled();
 
+	error WhitelistAlreadyEnabled();
+	error WhitelistNotEnabled();
+
 	constructor() {}
 
 	function _whitelisted(address _account, bytes32[] calldata _merkleProof) internal view returns (bool) {
@@ -17,14 +20,14 @@ abstract contract Whitelist {
 	}
 
 	function _enableWhitelist(bytes32 _merkleRoot) internal {
-		require(!whitelisted, "Whitelist already enabled");
+		if (whitelisted) revert WhitelistAlreadyEnabled();
 		merkleRoot = _merkleRoot;
 		whitelisted = true;
 		emit WhitelistEnabled();
 	}
 
 	function _disableWhitelist() internal {
-		require(whitelisted, "Whitelist not enabled");
+		if (!whitelisted) revert WhitelistNotEnabled();
 		delete merkleRoot;
 		delete whitelisted;
 		emit WhitelistDisabled();
