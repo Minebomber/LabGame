@@ -269,4 +269,11 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 	function setCallbackGasLimit(uint32 _callbackGasLimit) external onlyOwner {
 		_setCallbackGasLimit(_callbackGasLimit);
 	}
+
+	/**
+	 * @dev This empty reserved space is put in place to allow future versions to add new
+	 * variables without shifting down storage in the inheritance chain.
+	 * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+	 */
+	uint256[43] private __gap;
 }

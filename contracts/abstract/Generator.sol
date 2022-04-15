@@ -138,4 +138,11 @@ abstract contract Generator is VRFConsumerBaseV2Upgradable {
 	function _setCallbackGasLimit(uint32 _callbackGasLimit) internal {
 		callbackGasLimit = _callbackGasLimit;
 	}
+
+	/**
+	 * @dev This empty reserved space is put in place to allow future versions to add new
+	 * variables without shifting down storage in the inheritance chain.
+	 * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+	 */
+	uint256[45] private __gap;
 }
