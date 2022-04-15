@@ -122,10 +122,10 @@ describe('LabGame', function () {
 			).to.emit(this.labGame, 'Requested');
 		});
 		
-		it('totalSupply includes pending', async function () {
+		it('totalMinted includes pending', async function () {
 			await this.labGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
 			expect(
-				await this.labGame.totalSupply()
+				await this.labGame.totalMinted()
 			).to.equal(0);
 			await this.labGame.connect(this.accounts[3]).whitelistMint(
 				2,
@@ -133,7 +133,7 @@ describe('LabGame', function () {
 				{ value: ethers.utils.parseEther('0.12') }
 			);
 			expect(
-				await this.labGame.totalSupply()
+				await this.labGame.totalMinted()
 			).to.equal(2);
 		});
 
@@ -210,15 +210,15 @@ describe('LabGame', function () {
 			).to.be.revertedWith('Invalid mint amount');
 		});
 
-		it('totalSupply includes pending', async function () {
+		it('totalMinted includes pending', async function () {
 			expect(
-				await this.labGame.totalSupply()
+				await this.labGame.totalMinted()
 			).to.equal(0);
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(2, [], { value: ethers.utils.parseEther('0.12') })
 			).to.emit(this.labGame, 'Requested');
 			expect(
-				await this.labGame.totalSupply()
+				await this.labGame.totalMinted()
 			).to.equal(2);
 		});
 
@@ -392,13 +392,9 @@ describe('LabGame', function () {
 		});
 
 		it('receiver success', async function () {
-			expect(
-				await this.labGame.totalSupply()
-			).to.equal(0);
+			expect(await this.labGame.totalMinted()).to.equal(0);
 			await this.labGame.connect(this.accounts[1]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
-			expect(
-				await this.labGame.totalSupply()
-			).to.equal(1);
+			expect(await this.labGame.totalMinted()).to.equal(1);
 			await this.vrf.fulfillRequests();
 			await expect(
 				this.labGame.connect(this.accounts[1]).reveal()
@@ -406,9 +402,7 @@ describe('LabGame', function () {
 			expect(
 				await this.labGame.tokenOfOwnerByIndex(this.accounts[1].address, 0)
 			).to.equal(1);
-			expect(
-				await this.labGame.totalSupply()
-			).to.equal(1);
+			expect(await this.labGame.totalMinted()).to.equal(1);
 		});
 	});
 	

@@ -110,14 +110,14 @@ describe('Blueprint', function () {
 			await expect(this.blueprint.claim()).to.be.revertedWith('Nothing to claim');
 		});
 
-		it('totalSupply updates with pending mint', async function() {
-			expect(await this.blueprint.totalSupply()).to.equal(0);
+		it('totalMinted updates with pending mint', async function() {
+			expect(await this.blueprint.totalMinted()).to.equal(0);
 			await increaseTime(172800);
 			await this.blueprint.claim();
-			expect(await this.blueprint.totalSupply()).to.equal(2);
+			expect(await this.blueprint.totalMinted()).to.equal(2);
 			await this.vrf.fulfillRequests();
 			await this.blueprint.reveal();
-			expect(await this.blueprint.totalSupply()).to.equal(2);
+			expect(await this.blueprint.totalMinted()).to.equal(2);
 		});
 	});
 
