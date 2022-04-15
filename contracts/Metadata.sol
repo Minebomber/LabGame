@@ -6,6 +6,9 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "./LabGame.sol";
 
+error InvalidTrait(uint256 _trait);
+error ZeroAddress();
+
 contract Metadata is Ownable {
 	using Strings for uint256;
 	using Base64 for bytes;
@@ -26,9 +29,6 @@ contract Metadata is Ownable {
 	mapping(uint256 => mapping(uint256 => Trait)) traits;
 
 	LabGame labGame;
-
-	error InvalidTrait(uint256 _trait);
-	error InvalidAddress();
 
 	constructor() {}
 
@@ -141,7 +141,7 @@ contract Metadata is Ownable {
 	 * @param _labGame new address
 	 */
 	function setLabGame(address _labGame) external onlyOwner {
-		if (_labGame == address(0)) revert InvalidAddress();
+		if (_labGame == address(0)) revert ZeroAddress();
 		labGame = LabGame(_labGame);
 	}
 }

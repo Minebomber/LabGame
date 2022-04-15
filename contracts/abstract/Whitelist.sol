@@ -3,15 +3,15 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
+error WhitelistIsEnabled();
+error WhitelistNotEnabled();
+
 abstract contract Whitelist {
 	bool public whitelisted;
 	bytes32 internal merkleRoot;
 
 	event WhitelistEnabled();
 	event WhitelistDisabled();
-
-	error WhitelistIsEnabled();
-	error WhitelistNotEnabled();
 
 	constructor() {}
 

@@ -12,6 +12,12 @@ import "./Serum.sol";
 import "./LabGame.sol";
 import "./Laboratory.sol";
 
+error MintLimit();
+error BuildNotReady();
+error NotOwned(address _account, uint256 _tokenId);
+error DoesNotExist(uint256 _tokenId);
+error NotAuthorized(address _sender);
+
 contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable {
 	using Base64 for bytes;
 	using Strings for uint256;
@@ -32,12 +38,6 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 
 	mapping(uint256 => uint256) public tokenClaims;
 	mapping(address => uint256) public pendingClaims; 
-
-	error MintLimitReached();
-	error LaboratoryNotReady();
-	error TokenNotOwned();
-	error TokenDoesNotExist();
-	error SenderNotAuthorized();
 
 	/**
 	 * Blueprint constructor
@@ -73,7 +73,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	 */
 	function claim() external override zeroPending(_msgSender()) {
 		uint256 minted = totalMinted();
-		if (minted >= MAX_MINTED) revert MintLimitReached();
+		if (minted >= MAX_MINTED) revert MintLimit();
 		// Calculate earned blueprints
 		uint256 amount;
 		uint256 count = labGame.balanceOf(_msgSender());
@@ -90,7 +90,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		amount += pendingClaims[_msgSender()];
 		delete pendingClaims[_msgSender()];
 		// Verify 0 < amount < remaining supply
-		if (amount == 0) revert NothingToClaim();
+		if (amount == 0) revert NoClaimAvailable(_msgSender());
 		if (MAX_MINTED - minted < amount)
 			amount = MAX_MINTED - minted;
 		// Request blueprint mint
@@ -134,8 +134,8 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	}
 
 	function build(uint256 _tokenId) external {
-		if (address(laboratory) == address(0)) revert LaboratoryNotReady();
-		if (_msgSender() != ownerOf(_tokenId)) revert TokenNotOwned();
+		if (address(laboratory) == address(0)) revert BuildNotReady();
+		if (_msgSender() != ownerOf(_tokenId)) revert NotOwned(_msgSender(), _tokenId);
 		uint256 rarity = tokens[_tokenId];
 		serum.burn(_msgSender(), [50_000, 75_000, 100_000, 150_000][rarity]);
 		_burn(_tokenId);
@@ -150,7 +150,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	 * @return Token rarity
 	 */
 	function getToken(uint256 _tokenId) external view returns (uint256) {
-		if (!_exists(_tokenId)) revert TokenDoesNotExist();
+		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
 		return tokens[_tokenId];
 	}
 
@@ -164,7 +164,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	 * @return Token metadata URI
 	 */
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-		if (!_exists(_tokenId)) revert TokenDoesNotExist();
+		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
 		string[4] memory RARITY_NAMES = [
 			"Common",
 			"Uncommon",
@@ -186,7 +186,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	// -- LABGAME -- 
 
 	modifier onlyLabGame {
-		if (_msgSender() != address(labGame)) revert SenderNotAuthorized();
+		if (_msgSender() != address(labGame)) revert NotAuthorized(_msgSender());
 		_;
 	}
 
@@ -206,7 +206,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	 */
 	function updateClaim(address _account, uint256 _tokenId) external override onlyLabGame {
 		// Verify ownership
-		if (_account != labGame.ownerOf(_tokenId)) revert TokenNotOwned();
+		if (_account != labGame.ownerOf(_tokenId)) revert NotOwned(_msgSender(), _tokenId);
 		// Update pending balance
 		pendingClaims[_account] += (block.timestamp - tokenClaims[_tokenId]) / CLAIM_PERIOD;
 		// Claim token

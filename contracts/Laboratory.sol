@@ -8,6 +8,9 @@ import "@openzeppelin/contracts/utils/Base64.sol";
 
 import "./Blueprint.sol";
 
+//error DoesNotExist(uint256 _tokenId);
+//error NotAuthorized(address _sender);
+
 contract Laboratory is ERC721Enumerable, Ownable, Pausable {
 	using Base64 for bytes;
 	using Strings for uint256;
@@ -23,9 +26,6 @@ contract Laboratory is ERC721Enumerable, Ownable, Pausable {
 
 	Blueprint blueprint;
 	
-	error TokenDoesNotExist();
-	error SenderNotAuthorized();
-
 	constructor(
 		string memory _name,
 		string memory _symbol,
@@ -42,12 +42,12 @@ contract Laboratory is ERC721Enumerable, Ownable, Pausable {
 	 * @return Token data
 	 */
 	function getToken(uint256 _tokenId) external view returns (Token memory) {
-		if (!_exists(_tokenId)) revert TokenDoesNotExist();
+		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
 		return tokens[_tokenId];
 	}
 
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-		if (!_exists(_tokenId)) revert TokenDoesNotExist();
+		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
 		// TODO: Image, other attributes
 		string[4] memory RARITY_NAMES = [
 			"Common",
@@ -70,7 +70,7 @@ contract Laboratory is ERC721Enumerable, Ownable, Pausable {
 	// -- BLUEPRINT --
 
 	modifier onlyBlueprint() {
-		if (_msgSender() != address(blueprint)) revert SenderNotAuthorized();
+		if (_msgSender() != address(blueprint)) revert NotAuthorized(_msgSender());
 		_;
 	}
 

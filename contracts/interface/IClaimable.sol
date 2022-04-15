@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
+error NoClaimAvailable(address _account);
+
 interface IClaimable {
 	function claim() external;
 	function pendingClaim(address _account) external view returns (uint256);
@@ -9,6 +11,4 @@ interface IClaimable {
 
 	event Claimed(address indexed _account, uint256 _amount);
 	event Updated(address indexed _account, uint256 indexed _tokenId);
-
-	error NothingToClaim();
 }

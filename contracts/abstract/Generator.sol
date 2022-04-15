@@ -5,6 +5,13 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 
+error AccountHasPendingMint(address _account);
+error AcountHasNoPendingMint(address _account);
+error InvalidAccount();
+error InvalidRequestBase();
+error InvalidRequestCount();
+error RevealNotReady();
+
 abstract contract Generator is VRFConsumerBaseV2 {
 	VRFCoordinatorV2Interface immutable internal VRF_COORDINATOR;
 	bytes32 internal keyHash;
@@ -23,13 +30,6 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	event Requested(address indexed _account, uint256 _baseId, uint256 _count);
 	event Pending(address indexed _account, uint256 _baseId, uint256 _count);
 	event Revealed(address indexed _account, uint256 _tokenId);
-
-	error AccountHasPendingMint();
-	error AccountHasNoPendingMint();
-	error InvalidAccount();
-	error InvalidRequestBase();
-	error InvalidRequestCount();
-	error RevealNotReady();
 
 	/**
 	 * Constructor to initialize VRF
@@ -52,7 +52,7 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	}
 
 	modifier zeroPending(address _account) {
-		if (pendingMints[_account].base != 0) revert AccountHasPendingMint();
+		if (pendingMints[_account].base != 0) revert AccountHasPendingMint(_account);
 		_;
 	}
 
@@ -102,7 +102,7 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	function _reveal(address _account) internal {
 		if (_account == address(0)) revert InvalidAccount();
 		Mint memory mint = pendingMints[_account];
-		if (mint.base == 0) revert AccountHasNoPendingMint();
+		if (mint.base == 0) revert AcountHasNoPendingMint(_account);
 		if (mint.random.length == 0) revert RevealNotReady();
 		delete pendingMints[_account];
 		// Generate all tokens

@@ -11,6 +11,17 @@ import "./Serum.sol";
 import "./Metadata.sol";
 import "./Blueprint.sol";
 
+error NotWhitelisted(address _account);
+error InvalidMintAmount(uint256 _amount);
+error AccountLimitExceeded(address _account);
+error SoldOut();
+error GenerationLimit(uint256 _generation);
+error NotEnoughEther(uint256 _given, uint256 _expected);
+error InvalidBurnLength(uint256 _given, uint256 _expected);
+error BurnNotOwned(address _sender, uint256 _tokenId);
+error InvalidBurnGeneration(uint256 _given, uint256 _expected);
+//error DoesNotExist(uint256 _tokenId);
+
 contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	uint256 constant GEN0_PRICE = 0.06 ether;
 	uint256 constant GEN1_PRICE = 2_000 ether;
@@ -48,17 +59,6 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
-
-	error AccountNotWhitelisted();
-	error InvalidMintAmount();
-	error AccountLimitExceeded();
-	error SoldOut();
-	error GenerationLimit();
-	error InvalidPayment();
-	error InvalidBurnTokens();
-	error BurnTokenNotOwned();
-	error InvalidBurnGeneration();
-	error TokenDoesNotExist();
 
 	/**
 	 * LabGame constructor
@@ -105,14 +105,14 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	function whitelistMint(uint256 _amount, bytes32[] calldata _merkleProof) external payable whenNotPaused zeroPending(_msgSender()) {
 		// Verify account & amount
 		if (!whitelisted) revert WhitelistNotEnabled();
-		if (!_whitelisted(_msgSender(), _merkleProof)) revert AccountNotWhitelisted();
-		if (_amount == 0 || _amount > MINT_LIMIT) revert InvalidMintAmount();
-		if (balanceOf(_msgSender()) + _amount > MINT_LIMIT) revert AccountLimitExceeded();
+		if (!_whitelisted(_msgSender(), _merkleProof)) revert NotWhitelisted(_msgSender());
+		if (_amount == 0 || _amount > MINT_LIMIT) revert InvalidMintAmount(_amount);
+		if (balanceOf(_msgSender()) + _amount > MINT_LIMIT) revert AccountLimitExceeded(_msgSender());
 		// Verify generation
 		uint256 id = totalMinted();
 		if (id >= GEN0_MAX) revert SoldOut();
-		if (id + _amount > GEN0_MAX) revert GenerationLimit();
-		if (msg.value < _amount * GEN0_PRICE) revert InvalidPayment();
+		if (id + _amount > GEN0_MAX) revert GenerationLimit(0);
+		if (msg.value < _amount * GEN0_PRICE) revert NotEnoughEther(msg.value, _amount * GEN0_PRICE);
 		// Request token mint
 		_request(_msgSender(), id + 1, _amount);
 		tokenOffset += _amount;
@@ -127,7 +127,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused zeroPending(_msgSender()) {
 		if (whitelisted) revert WhitelistIsEnabled();
 		// Verify amount
-		if (_amount == 0 || _amount > MINT_LIMIT) revert InvalidMintAmount();
+		if (_amount == 0 || _amount > MINT_LIMIT) revert InvalidMintAmount(_amount);
 		// Verify generation and price
 		uint256 id = totalMinted();
 		if (id >= GEN3_MAX) revert SoldOut();
@@ -136,36 +136,37 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 
 		// Generation 0
 		if (id < GEN0_MAX) {
-			if (max > GEN0_MAX) revert GenerationLimit();
-			if (msg.value < _amount * GEN0_PRICE) revert InvalidPayment();
+			if (max > GEN0_MAX) revert GenerationLimit(0);
+			if (msg.value < _amount * GEN0_PRICE) revert NotEnoughEther(msg.value, _amount * GEN0_PRICE);
 			// Account limit of MINT_LIMIT not including whitelist mints
-			if (balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount > MINT_LIMIT) revert AccountLimitExceeded();
+			if (balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount > MINT_LIMIT)
+				revert AccountLimitExceeded(_msgSender());
 
 		// Generation 1
 		} else if (id < GEN1_MAX) {
-			if (max > GEN1_MAX) revert GenerationLimit();
+			if (max > GEN1_MAX) revert GenerationLimit(1);
 			serum.burn(_msgSender(), _amount * GEN1_PRICE);
 			generation = 1;
 
 		// Generation 2
 		} else if (id < GEN2_MAX) {
-			if (max > GEN2_MAX) revert GenerationLimit();
+			if (max > GEN2_MAX) revert GenerationLimit(2);
 			serum.burn(_msgSender(), _amount * GEN2_PRICE);
 			generation = 2;
 
 		// Generation 3
 		} else if (id < GEN3_MAX) {
-			if (max > GEN3_MAX) revert GenerationLimit();
+			if (max > GEN3_MAX) revert GenerationLimit(3);
 			serum.burn(_msgSender(), _amount * GEN3_PRICE);
 		}
 
 		// Burn tokens to mint gen 1 and 2
 		if (generation == 1 || generation == 2) {
-			if (_burnIds.length != _amount) revert InvalidBurnTokens();
+			if (_burnIds.length != _amount) revert InvalidBurnLength(_burnIds.length, _amount);
 			for (uint256 i; i < _burnIds.length; i++) {
 				// Verify token to be burned
-				if (_msgSender() != ownerOf(_burnIds[i])) revert BurnTokenNotOwned();
-				if (tokens[_burnIds[i]].data & 3 != generation - 1) revert InvalidBurnGeneration();
+				if (_msgSender() != ownerOf(_burnIds[i])) revert BurnNotOwned(_msgSender(), _burnIds[i]);
+				if (tokens[_burnIds[i]].data & 3 != generation - 1) revert InvalidBurnGeneration(tokens[_burnIds[i]].data & 3, generation - 1);
 				_burn(_burnIds[i]);
 			}
 			// Add burned tokens to id offset
@@ -173,7 +174,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 
 		// Generation 0 & 3 no burn needed
 		} else {
-			if (_burnIds.length != 0) revert InvalidBurnTokens();
+			if (_burnIds.length != 0) revert InvalidBurnLength(_burnIds.length, 0);
 		}
 		
 		// Request token mint
@@ -212,7 +213,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 * @param _tokenId Token ID to query
 	 */
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-		if (!_exists(_tokenId)) revert TokenDoesNotExist();
+		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
 		return metadata.tokenURI(_tokenId);
 	}
 
@@ -226,7 +227,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 * @return Token structure
 	 */
 	function getToken(uint256 _tokenId) external view returns (Token memory) {
-		if (!_exists(_tokenId)) revert TokenDoesNotExist();
+		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
 		return tokens[_tokenId];
 	}
 

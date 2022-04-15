@@ -8,6 +8,10 @@ import "./interface/IClaimable.sol";
 
 import "./LabGame.sol";
 
+error NotReady();
+//error NotAuthorized(address _sender);
+//error NotOwned(uint256 _tokenId);
+
 contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 	
@@ -75,7 +79,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 		amount += pendingClaims[_msgSender()];
 		delete pendingClaims[_msgSender()];
 		// Verify amount and mint
-		require(amount != 0, "Nothing to claim");
+		if (amount == 0) revert NoClaimAvailable(_msgSender());
 		_mint(_msgSender(), amount);
 		emit Claimed(_msgSender(), amount);
 	}
@@ -106,8 +110,8 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	// -- LABGAME -- 
 
 	modifier onlyLabGame {
-		require(address(labGame) != address(0), "LabGame not ready");
-		require(_msgSender() == address(labGame), "Not authorized");
+		if (address(labGame) == address(0)) revert NotReady();
+		if (_msgSender() != address(labGame)) revert NotAuthorized(_msgSender());
 		_;
 	}
 
@@ -132,7 +136,7 @@ contract Serum is ERC20, AccessControl, Pausable, IClaimable {
 	 */
 	function updateClaim(address _account, uint256 _tokenId) external override onlyLabGame whenNotPaused {
 		// Verify ownership
-		require(_account == labGame.ownerOf(_tokenId), "Token not owned");
+		if (_account != labGame.ownerOf(_tokenId)) revert NotOwned(_msgSender(), _tokenId);
 		uint256 amount;
 		// Claim the token
 		LabGame.Token memory token = labGame.getToken(_tokenId);
