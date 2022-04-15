@@ -24,6 +24,13 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	event Pending(address indexed _account, uint256 _baseId, uint256 _count);
 	event Revealed(address indexed _account, uint256 _tokenId);
 
+	error AccountHasPendingMint();
+	error AccountHasNoPendingMint();
+	error InvalidAccount();
+	error InvalidRequestBase();
+	error InvalidRequestCount();
+	error RevealNotReady();
+
 	/**
 	 * Constructor to initialize VRF
 	 * @param _vrfCoordinator VRF Coordinator address
@@ -45,7 +52,7 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	}
 
 	modifier zeroPending(address _account) {
-		require(pendingMints[_account].base == 0, "Account has pending mint");
+		if (pendingMints[_account].base != 0) revert AccountHasPendingMint();
 		_;
 	}
 
@@ -72,11 +79,10 @@ abstract contract Generator is VRFConsumerBaseV2 {
 		emit Pending(account, pendingMints[account].base, _randomWords.length);
 	}
 
-	function _request(address _account, uint256 _base, uint256 _count) internal {
-		require(_account != address(0), "Invalid account");
-		require(pendingMints[_account].base == 0, "Account has pending mint");
-		require(_base != 0, "Invalid base");
-		require(_count != 0, "Invalid count");
+	function _request(address _account, uint256 _base, uint256 _count) internal zeroPending(_account) {
+		if (_account == address(0)) revert InvalidAccount();
+		if (_base == 0) revert InvalidRequestBase();
+		if (_count == 0) revert InvalidRequestCount();
 		// Request random numbers for tokens, save request id to account
 		uint256 requestId = VRF_COORDINATOR.requestRandomWords(
 			keyHash,
@@ -94,9 +100,10 @@ abstract contract Generator is VRFConsumerBaseV2 {
 	}
 
 	function _reveal(address _account) internal {
+		if (_account == address(0)) revert InvalidAccount();
 		Mint memory mint = pendingMints[_account];
-		require(mint.base != 0, "No pending mint");
-		require(mint.random.length != 0, "Reveal not ready");
+		if (mint.base == 0) revert AccountHasNoPendingMint();
+		if (mint.random.length == 0) revert RevealNotReady();
 		delete pendingMints[_account];
 		// Generate all tokens
 		for (uint256 i; i < mint.count; i++) {
