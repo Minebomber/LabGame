@@ -41,19 +41,28 @@ async function main() {
 		'Blueprint',
 		'Blueprint',
 		'BLUEPRINT',
+		Serum.address,
 		LabGame.address,
 		TestVRFCoordinator.address,
 		KEY_HASH,
 		SUBSCRIPTION_ID,
 		CALLBACK_GAS_LIMIT
 	);
+	const Laboratory = await deployContract(
+		'Laboratory',
+		'Laboratory',
+		'LABORATORY',
+		Blueprint.address
+	);
 
 	await Serum.addController(LabGame.address);
 	await Serum.setLabGame(LabGame.address);
 	await Metadata.setLabGame(LabGame.address);
 	await LabGame.setBlueprint(Blueprint.address);
-	// Whitelist for accounts 0-9
-	await LabGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
+	// Whitelist for accounts 0-9 + ... => 2500 acct whitelist
+	await LabGame.enableWhitelist('0x22099accb4aa541c33cead242b5a46a3bf490fb6dfb40044df5627db978e59af');
+
+	await Blueprint.setLaboratory(Laboratory.address);
 
 	for (let i = 0; i < 17; i++) {
 		await Metadata.setTraits(i, [

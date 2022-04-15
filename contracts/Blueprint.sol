@@ -16,7 +16,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	using Base64 for bytes;
 	using Strings for uint256;
 
-	uint256 constant MAX_SUPPLY = 5000;
+	uint256 constant MAX_MINTED = 5000;
 
 	uint256 constant CLAIM_PERIOD = 2 days;
  
@@ -66,8 +66,8 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	 * Claim scientist rewards and request blueprint mint
 	 */
 	function claim() external override zeroPending(_msgSender()) {
-		uint256 supply = totalSupply();
-		require(supply < MAX_SUPPLY, "Mint limit reached");
+		uint256 minted = totalMinted();
+		require(minted < MAX_MINTED, "Mint limit reached");
 		// Calculate earned blueprints
 		uint256 amount;
 		uint256 count = labGame.balanceOf(_msgSender());
@@ -85,10 +85,10 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		delete pendingClaims[_msgSender()];
 		// Verify 0 < amount < remaining supply
 		require(amount != 0, "Nothing to claim");
-		if (MAX_SUPPLY - supply < amount)
-			amount = MAX_SUPPLY - supply;
+		if (MAX_MINTED - minted < amount)
+			amount = MAX_MINTED - minted;
 		// Request blueprint mint
-		_request(_msgSender(), supply + 1, amount);
+		_request(_msgSender(), minted + 1, amount);
 		tokenOffset += amount;
 	}
 
@@ -110,10 +110,10 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		}
 		// Include pending claims
 		amount += pendingClaims[_account];
-		// Cap pending count at MAX_SUPPLY blueprints
-		uint256 supply = totalSupply();
-		if (MAX_SUPPLY - supply < amount)
-			amount = MAX_SUPPLY - supply;
+		// Cap pending count at MAX_MINTED blueprints
+		uint256 minted = totalMinted();
+		if (MAX_MINTED - minted < amount)
+			amount = MAX_MINTED - minted;
 	}
 
 	/**
@@ -148,12 +148,8 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		return tokens[_tokenId];
 	}
 
-	/**
-	 * Override supply to include pending and burned mints
-	 * @return total minted + pending + burned as supply
-	 */
-	function totalSupply() public view override returns (uint256) {
-		return ERC721Enumerable.totalSupply() + tokenOffset;
+	function totalMinted() public view returns (uint256) {
+		return totalSupply() + tokenOffset;
 	}
 
 	/**

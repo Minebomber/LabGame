@@ -98,7 +98,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		require(_amount != 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
 		require(balanceOf(_msgSender()) + _amount <= MINT_LIMIT, "Account limit exceeded");
 		// Verify generation
-		uint256 id = totalSupply();
+		uint256 id = totalMinted();
 		require(id < GEN0_MAX, "Generation 0 sold out");
 		require(id + _amount <= GEN0_MAX, "Generation limit");
 		require(msg.value >= _amount * GEN0_PRICE, "Not enough ether");
@@ -118,7 +118,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		// Verify amount
 		require(_amount != 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
 		// Verify generation and price
-		uint256 id = totalSupply();
+		uint256 id = totalMinted();
 		require(id < GEN3_MAX, "Sold out");
 		uint256 max = id + _amount;
 		uint256 generation;
@@ -208,12 +208,8 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 		return metadata.tokenURI(_tokenId);
 	}
 
-	/**
-	 * Override supply to include pending and burned mints
-	 * @return total minted + pending + burned as supply
-	 */
-	function totalSupply() public view override returns (uint256) {
-		return ERC721Enumerable.totalSupply() + tokenOffset;
+	function totalMinted() public view returns (uint256) {
+		return totalSupply() + tokenOffset;
 	}
 
 	/**

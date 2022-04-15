@@ -33,6 +33,7 @@ describe('Blueprint', function () {
 			'Blueprint',
 			'Blueprint',
 			'BLUEPRINT',
+			this.serum.address,
 			this.labGame.address,
 			this.vrf.address,
 			KEY_HASH,
