@@ -112,7 +112,7 @@ describe('Blueprint', function () {
 
 		it('totalMinted updates with pending mint', async function() {
 			expect(await this.blueprint.totalMinted()).to.equal(0);
-			await increaseTime(172800);
+			await increaseTime(172801);
 			await this.blueprint.claim();
 			expect(await this.blueprint.totalMinted()).to.equal(2);
 			await this.vrf.fulfillRequests();
@@ -131,7 +131,7 @@ describe('Blueprint', function () {
 		});
 
 		it('correct pending calculation', async function () {
-			await increaseTime(172800);
+			await increaseTime(172801);
 			await this.blueprint.setPaused(true);
 			expect(await this.blueprint.pendingClaim(this.accounts[0].address)).to.equal(2);
 		})
