@@ -27,6 +27,9 @@ contract Metadata is Ownable {
 
 	LabGame labGame;
 
+	error InvalidTrait(uint256 _trait);
+	error InvalidAddress();
+
 	constructor() {}
 
 	// -- EXTERNAL --
@@ -128,7 +131,7 @@ contract Metadata is Ownable {
 	 * @param _traits trait data
 	 */
 	function setTraits(uint256 _trait, Trait[] calldata _traits) external onlyOwner {
-		require(_trait < MAX_TRAITS, "Invalid trait");
+		if (_trait >= MAX_TRAITS) revert InvalidTrait(_trait);
 		for (uint256 i; i < _traits.length; i++)
 			traits[_trait][i] = _traits[i];
 	}
@@ -138,7 +141,7 @@ contract Metadata is Ownable {
 	 * @param _labGame new address
 	 */
 	function setLabGame(address _labGame) external onlyOwner {
-		require(_labGame != address(0), "Address cannot be 0");
+		if (_labGame == address(0)) revert InvalidAddress();
 		labGame = LabGame(_labGame);
 	}
 }

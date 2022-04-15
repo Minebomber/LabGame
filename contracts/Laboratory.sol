@@ -23,6 +23,9 @@ contract Laboratory is ERC721Enumerable, Ownable, Pausable {
 
 	Blueprint blueprint;
 	
+	error TokenDoesNotExist();
+	error SenderNotAuthorized();
+
 	constructor(
 		string memory _name,
 		string memory _symbol,
@@ -39,12 +42,12 @@ contract Laboratory is ERC721Enumerable, Ownable, Pausable {
 	 * @return Token data
 	 */
 	function getToken(uint256 _tokenId) external view returns (Token memory) {
-		require(_exists(_tokenId), "Token query for nonexistent token");
+		if (!_exists(_tokenId)) revert TokenDoesNotExist();
 		return tokens[_tokenId];
 	}
 
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-		require(_exists(_tokenId), "URI query for nonexistent token");
+		if (!_exists(_tokenId)) revert TokenDoesNotExist();
 		// TODO: Image, other attributes
 		string[4] memory RARITY_NAMES = [
 			"Common",
@@ -67,7 +70,7 @@ contract Laboratory is ERC721Enumerable, Ownable, Pausable {
 	// -- BLUEPRINT --
 
 	modifier onlyBlueprint() {
-		require(_msgSender() == address(blueprint), "Not authorized");
+		if (_msgSender() != address(blueprint)) revert SenderNotAuthorized();
 		_;
 	}
 

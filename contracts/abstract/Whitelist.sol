@@ -10,7 +10,7 @@ abstract contract Whitelist {
 	event WhitelistEnabled();
 	event WhitelistDisabled();
 
-	error WhitelistAlreadyEnabled();
+	error WhitelistIsEnabled();
 	error WhitelistNotEnabled();
 
 	constructor() {}
@@ -20,7 +20,7 @@ abstract contract Whitelist {
 	}
 
 	function _enableWhitelist(bytes32 _merkleRoot) internal {
-		if (whitelisted) revert WhitelistAlreadyEnabled();
+		if (whitelisted) revert WhitelistIsEnabled();
 		merkleRoot = _merkleRoot;
 		whitelisted = true;
 		emit WhitelistEnabled();

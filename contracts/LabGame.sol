@@ -49,6 +49,17 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
 
+	error AccountNotWhitelisted();
+	error InvalidMintAmount();
+	error AccountLimitExceeded();
+	error SoldOut();
+	error GenerationLimit();
+	error InvalidPayment();
+	error InvalidBurnTokens();
+	error BurnTokenNotOwned();
+	error InvalidBurnGeneration();
+	error TokenDoesNotExist();
+
 	/**
 	 * LabGame constructor
 	 * @param _name ERC721 name
@@ -93,15 +104,15 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 */
 	function whitelistMint(uint256 _amount, bytes32[] calldata _merkleProof) external payable whenNotPaused zeroPending(_msgSender()) {
 		// Verify account & amount
-		require(whitelisted, "Whitelist not enabled");
-		require(_whitelisted(_msgSender(), _merkleProof), "Account not whitelisted");
-		require(_amount != 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
-		require(balanceOf(_msgSender()) + _amount <= MINT_LIMIT, "Account limit exceeded");
+		if (!whitelisted) revert WhitelistNotEnabled();
+		if (!_whitelisted(_msgSender(), _merkleProof)) revert AccountNotWhitelisted();
+		if (_amount == 0 || _amount > MINT_LIMIT) revert InvalidMintAmount();
+		if (balanceOf(_msgSender()) + _amount > MINT_LIMIT) revert AccountLimitExceeded();
 		// Verify generation
 		uint256 id = totalMinted();
-		require(id < GEN0_MAX, "Generation 0 sold out");
-		require(id + _amount <= GEN0_MAX, "Generation limit");
-		require(msg.value >= _amount * GEN0_PRICE, "Not enough ether");
+		if (id >= GEN0_MAX) revert SoldOut();
+		if (id + _amount > GEN0_MAX) revert GenerationLimit();
+		if (msg.value < _amount * GEN0_PRICE) revert InvalidPayment();
 		// Request token mint
 		_request(_msgSender(), id + 1, _amount);
 		tokenOffset += _amount;
@@ -114,50 +125,47 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 * @param _burnIds Token Ids to burn as payment (for gen 1 & 2)
 	 */
 	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused zeroPending(_msgSender()) {
-		require(!whitelisted, "Whitelist is enabled");
+		if (whitelisted) revert WhitelistIsEnabled();
 		// Verify amount
-		require(_amount != 0 && _amount <= MINT_LIMIT, "Invalid mint amount");
+		if (_amount == 0 || _amount > MINT_LIMIT) revert InvalidMintAmount();
 		// Verify generation and price
 		uint256 id = totalMinted();
-		require(id < GEN3_MAX, "Sold out");
+		if (id >= GEN3_MAX) revert SoldOut();
 		uint256 max = id + _amount;
 		uint256 generation;
 
 		// Generation 0
 		if (id < GEN0_MAX) {
-			require(max <= GEN0_MAX, "Generation limit");
-			require(msg.value >= _amount * GEN0_PRICE, "Not enough ether");
+			if (max > GEN0_MAX) revert GenerationLimit();
+			if (msg.value < _amount * GEN0_PRICE) revert InvalidPayment();
 			// Account limit of MINT_LIMIT not including whitelist mints
-			require(
-				balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount <= MINT_LIMIT, 
-				"Account limit exceeded"
-			);
+			if (balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount > MINT_LIMIT) revert AccountLimitExceeded();
 
 		// Generation 1
 		} else if (id < GEN1_MAX) {
-			require(max <= GEN1_MAX, "Generation limit");
+			if (max > GEN1_MAX) revert GenerationLimit();
 			serum.burn(_msgSender(), _amount * GEN1_PRICE);
 			generation = 1;
 
 		// Generation 2
 		} else if (id < GEN2_MAX) {
-			require(max <= GEN2_MAX, "Generation limit");
+			if (max > GEN2_MAX) revert GenerationLimit();
 			serum.burn(_msgSender(), _amount * GEN2_PRICE);
 			generation = 2;
 
 		// Generation 3
 		} else if (id < GEN3_MAX) {
-			require(max <= GEN3_MAX, "Generation limit");
+			if (max > GEN3_MAX) revert GenerationLimit();
 			serum.burn(_msgSender(), _amount * GEN3_PRICE);
 		}
 
 		// Burn tokens to mint gen 1 and 2
 		if (generation == 1 || generation == 2) {
-			require(_burnIds.length == _amount, "Invalid burn tokens");
+			if (_burnIds.length != _amount) revert InvalidBurnTokens();
 			for (uint256 i; i < _burnIds.length; i++) {
 				// Verify token to be burned
-				require(_msgSender() == ownerOf(_burnIds[i]), "Burn token not owned");
-				require(tokens[_burnIds[i]].data & 3 == generation - 1, "Must burn previous generation");
+				if (_msgSender() != ownerOf(_burnIds[i])) revert BurnTokenNotOwned();
+				if (tokens[_burnIds[i]].data & 3 != generation - 1) revert InvalidBurnGeneration();
 				_burn(_burnIds[i]);
 			}
 			// Add burned tokens to id offset
@@ -165,7 +173,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 
 		// Generation 0 & 3 no burn needed
 		} else {
-			require(_burnIds.length == 0, "No burn tokens needed");
+			if (_burnIds.length != 0) revert InvalidBurnTokens();
 		}
 		
 		// Request token mint
@@ -204,7 +212,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 * @param _tokenId Token ID to query
 	 */
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-		require(_exists(_tokenId), "URI query for nonexistent token");
+		if (!_exists(_tokenId)) revert TokenDoesNotExist();
 		return metadata.tokenURI(_tokenId);
 	}
 
@@ -218,7 +226,7 @@ contract LabGame is ERC721Enumerable, Ownable, Pausable, Generator, Whitelist {
 	 * @return Token structure
 	 */
 	function getToken(uint256 _tokenId) external view returns (Token memory) {
-		require(_exists(_tokenId), "Token query for nonexistent token");
+		if (!_exists(_tokenId)) revert TokenDoesNotExist();
 		return tokens[_tokenId];
 	}
 
