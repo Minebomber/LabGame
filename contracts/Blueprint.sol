@@ -33,6 +33,12 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	mapping(uint256 => uint256) public tokenClaims;
 	mapping(address => uint256) public pendingClaims; 
 
+	error MintLimitReached();
+	error LaboratoryNotReady();
+	error TokenNotOwned();
+	error TokenDoesNotExist();
+	error SenderNotAuthorized();
+
 	/**
 	 * Blueprint constructor
 	 * @param _name ERC721 name
@@ -67,7 +73,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	 */
 	function claim() external override zeroPending(_msgSender()) {
 		uint256 minted = totalMinted();
-		require(minted < MAX_MINTED, "Mint limit reached");
+		if (minted >= MAX_MINTED) revert MintLimitReached();
 		// Calculate earned blueprints
 		uint256 amount;
 		uint256 count = labGame.balanceOf(_msgSender());
@@ -84,7 +90,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 		amount += pendingClaims[_msgSender()];
 		delete pendingClaims[_msgSender()];
 		// Verify 0 < amount < remaining supply
-		require(amount != 0, "Nothing to claim");
+		if (amount == 0) revert NothingToClaim();
 		if (MAX_MINTED - minted < amount)
 			amount = MAX_MINTED - minted;
 		// Request blueprint mint
@@ -128,8 +134,8 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	}
 
 	function build(uint256 _tokenId) external {
-		require(address(laboratory) != address(0), "Laboratory not ready");
-		require(_msgSender() == ownerOf(_tokenId), "Token not owned");
+		if (address(laboratory) == address(0)) revert LaboratoryNotReady();
+		if (_msgSender() != ownerOf(_tokenId)) revert TokenNotOwned();
 		uint256 rarity = tokens[_tokenId];
 		serum.burn(_msgSender(), [50_000, 75_000, 100_000, 150_000][rarity]);
 		_burn(_tokenId);
@@ -144,7 +150,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	 * @return Token rarity
 	 */
 	function getToken(uint256 _tokenId) external view returns (uint256) {
-		require(_exists(_tokenId), "Token query for nonexistent token");
+		if (!_exists(_tokenId)) revert TokenDoesNotExist();
 		return tokens[_tokenId];
 	}
 
@@ -158,7 +164,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	 * @return Token metadata URI
 	 */
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-		require(_exists(_tokenId), "URI query for nonexistent token");
+		if (!_exists(_tokenId)) revert TokenDoesNotExist();
 		string[4] memory RARITY_NAMES = [
 			"Common",
 			"Uncommon",
@@ -180,7 +186,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	// -- LABGAME -- 
 
 	modifier onlyLabGame {
-		require(_msgSender() == address(labGame), "Not authorized");
+		if (_msgSender() != address(labGame)) revert SenderNotAuthorized();
 		_;
 	}
 
@@ -200,7 +206,7 @@ contract Blueprint is ERC721Enumerable, Ownable, Pausable, Generator, IClaimable
 	 */
 	function updateClaim(address _account, uint256 _tokenId) external override onlyLabGame {
 		// Verify ownership
-		require(_account == labGame.ownerOf(_tokenId), "Token not owned");
+		if (_account != labGame.ownerOf(_tokenId)) revert TokenNotOwned();
 		// Update pending balance
 		pendingClaims[_account] += (block.timestamp - tokenClaims[_tokenId]) / CLAIM_PERIOD;
 		// Claim token

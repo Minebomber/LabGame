@@ -9,4 +9,6 @@ interface IClaimable {
 
 	event Claimed(address indexed _account, uint256 _amount);
 	event Updated(address indexed _account, uint256 indexed _tokenId);
+
+	error NothingToClaim();
 }
