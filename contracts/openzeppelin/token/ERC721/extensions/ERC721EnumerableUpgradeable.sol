@@ -5,7 +5,7 @@ pragma solidity ^0.8.13;
 
 import "../ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721EnumerableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "../../../proxy/utils/Initializable.sol";
 
 /**
  * @dev This implements an optional extension of {ERC721} defined in the EIP that adds

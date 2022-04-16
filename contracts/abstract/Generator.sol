@@ -3,7 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "./VRFConsumerBaseV2Upgradable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "../openzeppelin/proxy/utils/Initializable.sol";
 
 error AccountHasPendingMint(address _account);
 error AcountHasNoPendingMint(address _account);
