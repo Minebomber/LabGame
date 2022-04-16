@@ -63,6 +63,7 @@ async function main() {
 	);
 
 	await Serum.addController(LabGame.address);
+	await Serum.addController(Blueprint.address);
 	await Serum.setLabGame(LabGame.address);
 	await Metadata.setLabGame(LabGame.address);
 	await LabGame.setBlueprint(Blueprint.address);
