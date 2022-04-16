@@ -41,14 +41,9 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 
 	uint256 constant MAX_TRAITS = 17;
 	uint256 constant TYPE_OFFSET = 9;
-	/*
-	struct Token {
-		uint8 data;
-		uint8[9] trait;
-	}
-	*/
+
 	mapping(uint256 => uint256) tokens;
-	mapping(uint256 => uint256) hashes;
+	mapping(bytes32 => uint256) hashes;
 	mapping(address => uint256) whitelistMints;
 
 	uint256 tokenOffset;
@@ -86,11 +81,10 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		__Pausable_init();
 		__Generator_init(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit);
 		__Whitelist_init();
-		// Initialize contracts
+
 		serum = Serum(_serum);
 		metadata = Metadata(_metadata);
 
-		// Setup alias tables for random token generation
 		for (uint256 i; i < MAX_TRAITS; i++) {
 			rarities[i] = [255, 170, 85, 85];
 			aliases[i] = [0, 0, 0, 1];
@@ -286,17 +280,17 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		else if (_tokenId <= GEN3_MAX) generation = 3;
 		// Select traits with given seed
 		token = _selectTraits(_seed, generation);
-		uint256 hashed = _hashToken(token);
+		bytes32 hash = _hashToken(token);
 		// While traits are not unique
-		while (hashes[hashed] != 0) {
+		while (hashes[hash] != 0) {
 			// Hash seed and try again
 			_seed = uint256(keccak256(abi.encodePacked(_seed)));
 			token = _selectTraits(_seed, generation);
-			hashed = _hashToken(token);
+			hash = _hashToken(token);
 		}
 		// Update save data and mark hash as used
 		tokens[_tokenId] = token;
-		hashes[hashed] = _tokenId;
+		hashes[hash] = _tokenId;
 	}
 
 	/**
@@ -333,8 +327,8 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _token Token data to hash
 	 * @return Keccak hash of the token data
 	 */
-	function _hashToken(uint256 _token) internal pure returns (uint256) {
-		return uint256(keccak256(abi.encodePacked(_token)));
+	function _hashToken(uint256 _token) internal pure returns (bytes32) {
+		return keccak256(abi.encodePacked(_token));
 	}
 
 	// -- OWNER --
