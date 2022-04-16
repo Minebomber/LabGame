@@ -7,7 +7,6 @@ const {
 	deployProxy,
 	increaseTime,
 	impersonateAccount,
-	message,
 } = require('./util');
 
 describe('Blueprint', function () {
@@ -178,7 +177,7 @@ describe('Blueprint', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.blueprint.connect(this.accounts[1]).setPaused(true)
-			).to.be.revertedWith(message.ownableNotOwner);
+			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('owner success', async function () {
@@ -191,7 +190,7 @@ describe('Blueprint', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.blueprint.connect(this.accounts[1]).setKeyHash(ethers.utils.formatBytes32String('new key hash'))
-			).to.be.revertedWith(message.ownableNotOwner);
+			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('owner success', async function () {
@@ -203,7 +202,7 @@ describe('Blueprint', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.blueprint.connect(this.accounts[1]).setSubscriptionId(1)
-			).to.be.revertedWith(message.ownableNotOwner);
+			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('owner success', async function () {
@@ -215,7 +214,7 @@ describe('Blueprint', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.blueprint.connect(this.accounts[1]).setCallbackGasLimit(1)
-			).to.be.revertedWith(message.ownableNotOwner);
+			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('owner success', async function () {

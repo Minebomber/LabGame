@@ -9,8 +9,6 @@ import "./interface/IClaimable.sol";
 import "./LabGame.sol";
 
 error NotReady();
-//error NotAuthorized(address _sender);
-//error NotOwned(uint256 _tokenId);
 
 contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeable, IClaimable {
 	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
@@ -112,7 +110,7 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 
 	modifier onlyLabGame {
 		if (address(labGame) == address(0)) revert NotReady();
-		if (_msgSender() != address(labGame)) revert NotAuthorized(_msgSender());
+		if (_msgSender() != address(labGame)) revert NotAuthorized(_msgSender(), address(labGame));
 		_;
 	}
 

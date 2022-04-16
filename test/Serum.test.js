@@ -6,7 +6,6 @@ const {
 	deployContract,
 	deployProxy,
 	impersonateAccount,
-	message,
 } = require('./util');
 
 describe('Serum', function () {
@@ -129,7 +128,7 @@ describe('Serum', function () {
 		it('non-controller revert', async function () {
 			await expect(
 				this.serum.connect(this.other).mint(this.other.address, 1000)
-			).to.be.revertedWith(message.accessControlMissingRole);
+			).to.be.revertedWith('AccessControl_MissingRole');
 		});
 
 		it('controller success', async function () {
@@ -144,7 +143,7 @@ describe('Serum', function () {
 			await this.serum.connect(this.owner).setPaused(true);
 			await expect(
 				this.serum.connect(this.other).mint(this.other.address, 1000)
-			).to.be.revertedWith(message.pausablePaused);
+			).to.be.revertedWith('Pausable_Paused');
 		});
 	});
 
@@ -152,7 +151,7 @@ describe('Serum', function () {
 		it('non-controller revert', async function () {
 			await expect(
 				this.serum.connect(this.other).burn(this.other.address, 1000)
-			).to.be.revertedWith(message.accessControlMissingRole);
+			).to.be.revertedWith('AccessControl_MissingRole');
 		});
 
 		it('controller success', async function () {
@@ -169,7 +168,7 @@ describe('Serum', function () {
 			await this.serum.connect(this.owner).setPaused(true);
 			await expect(
 				this.serum.connect(this.other).burn(this.other.address, 1000)
-			).to.be.revertedWith(message.pausablePaused);
+			).to.be.revertedWith('Pausable_Paused');
 		});
 	});
 
@@ -182,7 +181,7 @@ describe('Serum', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.serum.connect(this.other).setLabGame(ethers.constants.AddressZero)
-			).to.be.revertedWith(message.accessControlMissingRole);
+			).to.be.revertedWith('AccessControl_MissingRole');
 		});
 	});
 
@@ -197,7 +196,7 @@ describe('Serum', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.serum.connect(this.other).addController(this.other.address)
-			).to.be.revertedWith(message.accessControlMissingRole);
+			).to.be.revertedWith('AccessControl_MissingRole');
 		});
 	});
 
@@ -213,7 +212,7 @@ describe('Serum', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.serum.connect(this.other).addController(this.other.address)
-			).to.be.revertedWith(message.accessControlMissingRole);
+			).to.be.revertedWith('AccessControl_MissingRole');
 		});
 	});
 
@@ -221,7 +220,7 @@ describe('Serum', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.serum.connect(this.other).setPaused(true)
-			).to.be.revertedWith(message.accessControlMissingRole);
+			).to.be.revertedWith('AccessControl_MissingRole');
 		});
 
 		it('owner success', async function () {

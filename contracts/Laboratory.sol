@@ -8,9 +8,6 @@ import "@openzeppelin/contracts-upgradeable/utils/Base64Upgradeable.sol";
 
 import "./Blueprint.sol";
 
-//error DoesNotExist(uint256 _tokenId);
-//error NotAuthorized(address _sender);
-
 contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable {
 	using Base64Upgradeable for bytes;
 	using StringsUpgradeable for uint256;
@@ -38,12 +35,12 @@ contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, Pausable
 	 * @return Token data
 	 */
 	function getToken(uint256 _tokenId) external view returns (uint256) {
-		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
+		if (!_exists(_tokenId)) revert ERC721_QueryForNonexistentToken(_tokenId);
 		return tokens[_tokenId];
 	}
 
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
+		if (!_exists(_tokenId)) revert ERC721_QueryForNonexistentToken(_tokenId);
 		// TODO: Image, other attributes
 		string[4] memory RARITY_NAMES = [
 			"Common",
@@ -66,7 +63,7 @@ contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, Pausable
 	// -- BLUEPRINT --
 
 	modifier onlyBlueprint() {
-		if (_msgSender() != address(blueprint)) revert NotAuthorized(_msgSender());
+		if (_msgSender() != address(blueprint)) revert NotAuthorized(_msgSender(), address(blueprint));
 		_;
 	}
 

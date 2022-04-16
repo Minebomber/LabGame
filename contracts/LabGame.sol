@@ -209,7 +209,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _tokenId Token ID to query
 	 */
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
+		if (!_exists(_tokenId)) revert ERC721_QueryForNonexistentToken(_tokenId);
 		return metadata.tokenURI(_tokenId);
 	}
 
@@ -223,7 +223,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @return Token structure
 	 */
 	function getToken(uint256 _tokenId) external view returns (uint256) {
-		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
+		if (!_exists(_tokenId)) revert ERC721_QueryForNonexistentToken(_tokenId);
 		return tokens[_tokenId];
 	}
 

@@ -5,7 +5,6 @@ const {
 	restore,
 	deployContract,
 	deployProxy,
-	message,
 } = require('./util');
 
 describe('LabGame', function () {
@@ -67,7 +66,7 @@ describe('LabGame', function () {
 			await this.labGame.connect(this.accounts[0]).setPaused(true);
 			await expect(
 				this.labGame.connect(this.accounts[1]).whitelistMint(1, [])
-			).to.be.revertedWith(message.pausablePaused);
+			).to.be.revertedWith('Pausable_Paused');
 		});
 
 		it('whitelist not enabled revert', async function () {
@@ -178,7 +177,7 @@ describe('LabGame', function () {
 			await this.labGame.connect(this.accounts[0]).setPaused(true);
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(1, [])
-			).to.be.revertedWith(message.pausablePaused);
+			).to.be.revertedWith('Pausable_Paused');
 		});
 
 		it('whitelist enabled revert', async function () {
@@ -271,7 +270,7 @@ describe('LabGame', function () {
 
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(2, [], [])
-			).to.be.revertedWith(message.erc20BurnExceedsBalance);
+			).to.be.revertedWith('ERC20_BurnAmountExceedsBalance');
 		});
 
 		it('no burnIds revert', async function () {
@@ -301,7 +300,7 @@ describe('LabGame', function () {
 
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(1, [0])
-			).to.be.revertedWith(message.erc721OwnerQueryNonexistent);
+			).to.be.revertedWith('ERC721_QueryForNonexistentToken');
 		});
 
 		it('not owned burnIds revert', async function () {
@@ -334,7 +333,7 @@ describe('LabGame', function () {
 
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(2, [1, 1])
-			).to.be.revertedWith(message.erc721OwnerQueryNonexistent);
+			).to.be.revertedWith('ERC721_QueryForNonexistentToken');
 		});
 
 		it('too many burnIds revert', async function () {
@@ -437,7 +436,7 @@ describe('LabGame', function () {
 			expect(await this.labGame.whitelisted()).to.equal(false);
 			await expect(
 				this.labGame.connect(this.accounts[1]).enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed')
-			).to.be.revertedWith(message.ownableNotOwner);
+			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('already whitelisted revert', async function () {
@@ -463,7 +462,7 @@ describe('LabGame', function () {
 			expect(await this.labGame.whitelisted()).to.equal(true);
 			await expect(
 				this.labGame.connect(this.accounts[1]).disableWhitelist()
-			).to.be.revertedWith(message.ownableNotOwner);
+			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('not whitelisted revert', async function () {
@@ -485,7 +484,7 @@ describe('LabGame', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.labGame.connect(this.accounts[1]).setPaused(true)
-			).to.be.revertedWith(message.ownableNotOwner);
+			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('owner success', async function () {
@@ -498,7 +497,7 @@ describe('LabGame', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.labGame.connect(this.accounts[1]).setBlueprint(this.vrf.address)
-			).to.be.revertedWith(message.ownableNotOwner);
+			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('owner success', async function () {
@@ -511,7 +510,7 @@ describe('LabGame', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.labGame.connect(this.accounts[1]).setKeyHash(ethers.utils.formatBytes32String('new key hash'))
-			).to.be.revertedWith(message.ownableNotOwner);
+			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('owner success', async function () {
@@ -523,7 +522,7 @@ describe('LabGame', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.labGame.connect(this.accounts[1]).setSubscriptionId(1)
-			).to.be.revertedWith(message.ownableNotOwner);
+			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('owner success', async function () {
@@ -535,7 +534,7 @@ describe('LabGame', function () {
 		it('non-owner revert', async function () {
 			await expect(
 				this.labGame.connect(this.accounts[1]).setCallbackGasLimit(1)
-			).to.be.revertedWith(message.ownableNotOwner);
+			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('owner success', async function () {

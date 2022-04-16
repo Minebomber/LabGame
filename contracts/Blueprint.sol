@@ -15,8 +15,7 @@ import "./Laboratory.sol";
 error MintLimit();
 error BuildNotReady();
 error NotOwned(address _account, uint256 _tokenId);
-error DoesNotExist(uint256 _tokenId);
-error NotAuthorized(address _sender);
+error NotAuthorized(address _sender, address _expected);
 
 contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, Generator, IClaimable {
 	using Base64Upgradeable for bytes;
@@ -152,7 +151,7 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 	 * @return Token rarity
 	 */
 	function getToken(uint256 _tokenId) external view returns (uint256) {
-		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
+		if (!_exists(_tokenId)) revert ERC721_QueryForNonexistentToken(_tokenId);
 		return tokens[_tokenId];
 	}
 
@@ -166,7 +165,7 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 	 * @return Token metadata URI
 	 */
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
+		if (!_exists(_tokenId)) revert ERC721_QueryForNonexistentToken(_tokenId);
 		string[4] memory RARITY_NAMES = [
 			"Common",
 			"Uncommon",
@@ -188,7 +187,7 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 	// -- LABGAME -- 
 
 	modifier onlyLabGame {
-		if (_msgSender() != address(labGame)) revert NotAuthorized(_msgSender());
+		if (_msgSender() != address(labGame)) revert NotAuthorized(_msgSender(), address(labGame));
 		_;
 	}
 

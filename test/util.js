@@ -30,14 +30,6 @@ const impersonateAccount = async (address) => {
 	return waffle.provider.send('hardhat_impersonateAccount', [address]);
 };
 
-const message = {
-	accessControlMissingRole: /AccessControl: account .* is missing role .*/,
-	ownableNotOwner: 'Ownable: caller is not the owner',
-	pausablePaused: 'Pausable: paused',
-	erc20BurnExceedsBalance: 'ERC20: burn amount exceeds balance',
-	erc721OwnerQueryNonexistent: 'ERC721: owner query for nonexistent token',
-};
-
 Object.assign(exports, {
 	snapshot,
 	restore,
@@ -45,5 +37,4 @@ Object.assign(exports, {
 	deployContract,
 	increaseTime,
 	impersonateAccount,
-	message,
 });
