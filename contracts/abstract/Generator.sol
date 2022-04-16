@@ -70,6 +70,11 @@ abstract contract Generator is VRFConsumerBaseV2Upgradable {
 
 	// -- INTERNAL --
 
+	/**
+	 * Update pending mint with response from VRF
+	 * @param _requestId Request ID that was fulfilled
+	 * @param _randomWords Received random numbers
+	 */
 	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
 		// Pop account for request
 		address account = mintRequests[_requestId];
@@ -80,6 +85,12 @@ abstract contract Generator is VRFConsumerBaseV2Upgradable {
 		emit Pending(account, pendingMints[account].base, _randomWords.length);
 	}
 
+	/**
+	 * Setup a pending mint and request numbers from VRF
+	 * @param _account Account to request for
+	 * @param _base Base token ID
+	 * @param _count Number of tokens
+	 */
 	function _request(address _account, uint256 _base, uint256 _count) internal zeroPending(_account) {
 		if (_account == address(0)) revert InvalidAccount();
 		if (_base == 0) revert InvalidRequestBase();
@@ -100,6 +111,10 @@ abstract contract Generator is VRFConsumerBaseV2Upgradable {
 		emit Requested(_account, _base, _count);
 	}
 
+	/**
+	 * Reveal pending tokens with received random numbers
+	 * @param _account Account to reveal for
+	 */
 	function _reveal(address _account) internal {
 		if (_account == address(0)) revert InvalidAccount();
 		Mint memory mint = pendingMints[_account];
@@ -113,6 +128,11 @@ abstract contract Generator is VRFConsumerBaseV2Upgradable {
 		}
 	}
 
+	/**
+	 * Abstract function called on each token when revealing
+	 * @param _tokenId Token ID to reveal
+	 * @param _seed Random number from VRF for the token
+	 */
 	function _revealToken(uint256 _tokenId, uint256 _seed) internal virtual;
 
 	/**

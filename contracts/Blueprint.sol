@@ -232,6 +232,10 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 
 	// -- ADMIN --
 
+	/**
+	 * Set the laboratory contract
+	 * @param _laboratory Address of the laboratory contract
+	 */
 	function setLaboratory(address _laboratory) external onlyOwner {
 		laboratory = ILaboratory(_laboratory);
 	}

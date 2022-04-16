@@ -206,12 +206,17 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	/**
 	 * Get the metadata uri for a token
 	 * @param _tokenId Token ID to query
+	 * @return Token metadata json URI
 	 */
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
 		if (!_exists(_tokenId)) revert ERC721_QueryForNonexistentToken(_tokenId);
 		return metadata.tokenURI(_tokenId);
 	}
 
+	/**
+	 * Get the total number of minted tokens
+	 * @return Total number of minted tokens
+	 */
 	function totalMinted() public view returns (uint256) {
 		return totalSupply() + tokenOffset;
 	}

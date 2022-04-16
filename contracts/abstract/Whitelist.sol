@@ -14,12 +14,22 @@ abstract contract Whitelist is Initializable {
 	event WhitelistEnabled();
 	event WhitelistDisabled();
 
+	/** Whitelist contstructor (empty) */
 	function __Whitelist_init() internal onlyInitializing {}
 
+	/**
+	 * Checks if an account is whitelisted using the given proof
+	 * @param _account Account to verify
+	 * @param _merkleProof Proof to verify the account is in the merkle tree
+	 */
 	function _whitelisted(address _account, bytes32[] calldata _merkleProof) internal view returns (bool) {
 		return MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, keccak256(abi.encodePacked(_account)));
 	}
 
+	/**
+	 * Enable the whitelist and set the merkle tree root
+	 * @param _merkleRoot Whitelist merkle tree root hash
+	 */
 	function _enableWhitelist(bytes32 _merkleRoot) internal {
 		if (whitelisted) revert WhitelistIsEnabled();
 		merkleRoot = _merkleRoot;
@@ -27,6 +37,9 @@ abstract contract Whitelist is Initializable {
 		emit WhitelistEnabled();
 	}
 
+	/**
+	 * Disable the whitelist and clear the root hash
+	 */
 	function _disableWhitelist() internal {
 		if (!whitelisted) revert WhitelistNotEnabled();
 		delete merkleRoot;

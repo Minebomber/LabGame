@@ -40,7 +40,7 @@ contract Metadata is OwnableUpgradeable {
 	/**
 	 * Get the metadata uri for a token
 	 * @param _tokenId token id
-	 * @return token metadata as a base64 json uri
+	 * @return Token metadata data URI
 	 */
 	function tokenURI(uint256 _tokenId) external view returns (string memory) {
 		uint256 token = labGame.getToken(_tokenId);

@@ -20,6 +20,12 @@ contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, Pausable
 
 	IBlueprint blueprint;
 	
+	/**
+	 * Laboratory constructor
+	 * @param _name EC721 name
+	 * @param _symbol ERC721 symol
+	 * @param _blueprint Address of blueprint contract
+	 */
 	function initialize(
 		string memory _name,
 		string memory _symbol,
@@ -41,6 +47,11 @@ contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, Pausable
 		return tokens[_tokenId];
 	}
 
+	/**
+	 * Get the metadata uri for a token
+	 * @param _tokenId Token ID to query
+	 * @return Token metadata json URI
+	 */
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
 		if (!_exists(_tokenId)) revert ERC721_QueryForNonexistentToken(_tokenId);
 		// TODO: Image, other attributes
@@ -69,10 +80,15 @@ contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, Pausable
 		_;
 	}
 
+	/**
+	 * Mint a laboratory
+	 * Called by Blueprint on build()
+	 * @param _to Account to mint to
+	 * @param _rarity Rarity of the laboratory to mint
+	 */
 	function mint(address _to, uint256 _rarity) external onlyBlueprint {
 		uint256 id = totalSupply() + 1;
 		_safeMint(_to, id);
-
 		tokens[id] = _rarity;
 	}
 

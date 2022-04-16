@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../openzeppelin/proxy/utils/Initializable.sol";
 
+// Modified to use OpenZeppelin upgradeables
 /** ****************************************************************************
  * @notice Interface for contracts using VRF randomness
  * *****************************************************************************

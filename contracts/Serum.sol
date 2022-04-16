@@ -230,6 +230,10 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 	
 	// -- ADMIN --
 
+	/**
+	 * Set LabGame contract
+	 * @param _labGame Address of labgame contract
+	 */
 	function setLabGame(address _labGame) external onlyRole(DEFAULT_ADMIN_ROLE) {
 		labGame = ILabGame(_labGame);
 	}

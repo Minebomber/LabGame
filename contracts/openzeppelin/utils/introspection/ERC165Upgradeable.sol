@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts v4.4.1 (utils/introspection/ERC165.sol)
+// Modified to use custom errors instead of require strings
 
 pragma solidity ^0.8.0;
 

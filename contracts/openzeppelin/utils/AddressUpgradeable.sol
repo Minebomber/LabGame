@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.5.0) (utils/Address.sol)
+// Modified to use custom errors instead of require strings
 
 pragma solidity ^0.8.13;
 
