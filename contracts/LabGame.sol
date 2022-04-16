@@ -7,9 +7,9 @@ import "./openzeppelin/security/PausableUpgradeable.sol";
 import "./abstract/Generator.sol";
 import "./abstract/Whitelist.sol";
 
-import "./Serum.sol";
-import "./Metadata.sol";
-import "./Blueprint.sol";
+import "./interface/ISerum.sol";
+import "./interface/IMetadata.sol";
+import "./interface/IBlueprint.sol";
 
 error NotWhitelisted(address _account);
 error InvalidMintAmount(uint256 _amount);
@@ -20,7 +20,6 @@ error NotEnoughEther(uint256 _given, uint256 _expected);
 error InvalidBurnLength(uint256 _given, uint256 _expected);
 error BurnNotOwned(address _sender, uint256 _tokenId);
 error InvalidBurnGeneration(uint256 _given, uint256 _expected);
-//error DoesNotExist(uint256 _tokenId);
 
 contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, Generator, Whitelist {
 	uint256 constant GEN0_PRICE = 0.06 ether;
@@ -48,9 +47,9 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 
 	uint256 tokenOffset;
 
-	Serum public serum;
-	Metadata public metadata;
-	Blueprint public blueprint;
+	ISerum public serum;
+	IMetadata public metadata;
+	IBlueprint public blueprint;
 
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
@@ -82,8 +81,8 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		__Generator_init(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit);
 		__Whitelist_init();
 
-		serum = Serum(_serum);
-		metadata = Metadata(_metadata);
+		serum = ISerum(_serum);
+		metadata = IMetadata(_metadata);
 
 		for (uint256 i; i < MAX_TRAITS; i++) {
 			rarities[i] = [255, 170, 85, 85];
@@ -362,7 +361,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _blueprint Address of the blueprint contract
 	 */
 	function setBlueprint(address _blueprint) external onlyOwner {
-		blueprint = Blueprint(_blueprint);
+		blueprint = IBlueprint(_blueprint);
 	}
 
 	/**

@@ -8,9 +8,9 @@ import "./abstract/Generator.sol";
 import "./interface/IClaimable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/Base64Upgradeable.sol";
 
-import "./Serum.sol";
-import "./LabGame.sol";
-import "./Laboratory.sol";
+import "./interface/ISerum.sol";
+import "./interface/ILabGame.sol";
+import "./interface/ILaboratory.sol";
 
 error MintLimit();
 error BuildNotReady();
@@ -31,9 +31,9 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 
 	uint256 tokenOffset;
 
-	Serum public serum;
-	LabGame public labGame;
-	Laboratory public laboratory;
+	ISerum public serum;
+	ILabGame public labGame;
+	ILaboratory public laboratory;
 
 	mapping(uint256 => uint256) public tokenClaims;
 	mapping(address => uint256) public pendingClaims; 
@@ -63,8 +63,8 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 		__Pausable_init();
 		__Generator_init(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit);
 		
-		serum = Serum(_serum);
-		labGame = LabGame(_labGame);
+		serum = ISerum(_serum);
+		labGame = ILabGame(_labGame);
 	}
 
 	// -- EXTERNAL --
@@ -233,7 +233,7 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 	// -- ADMIN --
 
 	function setLaboratory(address _laboratory) external onlyOwner {
-		laboratory = Laboratory(_laboratory);
+		laboratory = ILaboratory(_laboratory);
 	}
 
 	/**

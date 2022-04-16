@@ -6,9 +6,11 @@ import "./openzeppelin/access/AccessControlUpgradeable.sol";
 import "./openzeppelin/security/PausableUpgradeable.sol";
 import "./interface/IClaimable.sol";
 
-import "./LabGame.sol";
+import "./interface/ILabGame.sol";
 
 error NotReady();
+error NotOwned(address _account, uint256 _tokenId);
+error NotAuthorized(address _sender, address _expected);
 
 contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeable, IClaimable {
 	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
@@ -31,7 +33,7 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 
 	mapping(address => uint256) public pendingClaims; 
 
-	LabGame public labGame;
+	ILabGame public labGame;
 
 	/**
 	 * Token constructor, sets owner permission
@@ -229,7 +231,7 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 	// -- ADMIN --
 
 	function setLabGame(address _labGame) external onlyRole(DEFAULT_ADMIN_ROLE) {
-		labGame = LabGame(_labGame);
+		labGame = ILabGame(_labGame);
 	}
 
 	/**

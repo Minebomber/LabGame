@@ -6,7 +6,9 @@ import "./openzeppelin/access/OwnableUpgradeable.sol";
 import "./openzeppelin/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/Base64Upgradeable.sol";
 
-import "./Blueprint.sol";
+import "./interface/IBlueprint.sol";
+
+error NotAuthorized(address _sender, address _expected);
 
 contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable {
 	using Base64Upgradeable for bytes;
@@ -16,7 +18,7 @@ contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, Pausable
 
 	mapping(uint256 => uint256) tokens;
 
-	Blueprint blueprint;
+	IBlueprint blueprint;
 	
 	function initialize(
 		string memory _name,
@@ -26,7 +28,7 @@ contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, Pausable
 		__ERC721_init(_name, _symbol);
 		__Ownable_init();
 		__Pausable_init();
-		blueprint = Blueprint(_blueprint);
+		blueprint = IBlueprint(_blueprint);
 	}
 
 	/**

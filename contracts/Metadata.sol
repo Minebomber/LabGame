@@ -4,7 +4,8 @@ pragma solidity ^0.8.13;
 import "./openzeppelin/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/Base64Upgradeable.sol";
-import "./LabGame.sol";
+
+import "./interface/ILabGame.sol";
 
 error InvalidTrait(uint256 _trait);
 error ZeroAddress();
@@ -28,7 +29,7 @@ contract Metadata is OwnableUpgradeable {
 	}
 	mapping(uint256 => mapping(uint256 => Trait)) traits;
 
-	LabGame labGame;
+	ILabGame labGame;
 
 	function initialize() public initializer {
 		__Ownable_init();
@@ -144,7 +145,7 @@ contract Metadata is OwnableUpgradeable {
 	 */
 	function setLabGame(address _labGame) external onlyOwner {
 		if (_labGame == address(0)) revert ZeroAddress();
-		labGame = LabGame(_labGame);
+		labGame = ILabGame(_labGame);
 	}
 
 	/**
