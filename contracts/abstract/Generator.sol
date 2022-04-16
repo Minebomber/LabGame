@@ -113,7 +113,7 @@ abstract contract Generator is VRFConsumerBaseV2Upgradable {
 		}
 	}
 
-	function _revealToken(uint256 _tokenId, uint256 _seed) internal virtual {}
+	function _revealToken(uint256 _tokenId, uint256 _seed) internal virtual;
 
 	/**
 	 * Set the VRF key hash
