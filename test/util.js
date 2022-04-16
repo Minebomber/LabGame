@@ -8,7 +8,14 @@ const restore = async (snapshotId) => {
   return waffle.provider.send('evm_revert', [snapshotId])
 };
 
-const deploy = async (name, ...args) => {
+const deployContract = async (name, ...args) => {
+	const factory = await ethers.getContractFactory(name);
+	const contract = await factory.deploy(...args);
+	await contract.deployed();
+	return contract;
+};
+
+const deployProxy = async (name, ...args) => {
 	const factory = await ethers.getContractFactory(name);
 	const contract = await upgrades.deployProxy(factory, [...args]);
 	await contract.deployed();
@@ -34,7 +41,8 @@ const message = {
 Object.assign(exports, {
 	snapshot,
 	restore,
-	deploy,
+	deployProxy,
+	deployContract,
 	increaseTime,
 	impersonateAccount,
 	message,

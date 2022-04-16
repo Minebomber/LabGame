@@ -1,10 +1,10 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { snapshot, restore, deploy, message } = require('./util');
+const { snapshot, restore, deployProxy } = require('./util');
 
 describe('Whitelist', function () {
 	before(async function () {
-		this.whitelist = await deploy('TestWhitelist');
+		this.whitelist = await deployProxy('TestWhitelist');
 		this.accounts = (await ethers.getSigners()).map(a => a.address);
 	});
 
@@ -29,7 +29,7 @@ describe('Whitelist', function () {
 			expect(await this.whitelist.whitelisted()).to.equal(true);
 			await expect(
 				this.whitelist.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed')
-			).to.be.revertedWith('Whitelist already enabled');
+			).to.be.revertedWith('WhitelistIsEnabled');
 		});
 	});
 
@@ -45,7 +45,7 @@ describe('Whitelist', function () {
 		it('not enabled revert', async function () {
 			await expect(
 				this.whitelist.disableWhitelist()
-			).to.be.revertedWith('Whitelist not enabled');
+			).to.be.revertedWith('WhitelistNotEnabled');
 		});
 	});
 

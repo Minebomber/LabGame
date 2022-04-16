@@ -2,16 +2,19 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 error WhitelistIsEnabled();
 error WhitelistNotEnabled();
 
-abstract contract Whitelist {
+abstract contract Whitelist is Initializable {
 	bool public whitelisted;
 	bytes32 internal merkleRoot;
 
 	event WhitelistEnabled();
 	event WhitelistDisabled();
+
+	function __Whitelist_init() internal onlyInitializing {}
 
 	function _whitelisted(address _account, bytes32[] calldata _merkleProof) internal view returns (bool) {
 		return MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, keccak256(abi.encodePacked(_account)));

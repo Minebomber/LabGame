@@ -3,10 +3,10 @@ const { ethers } = require('hardhat');
 const {
 	snapshot,
 	restore,
-	deploy,
+	deployContract,
+	deployProxy,
 	message,
 } = require('./util');
-
 
 describe('LabGame', function () {
 	const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
@@ -14,10 +14,10 @@ describe('LabGame', function () {
 	const CALLBACK_GAS_LIMIT = 100_000;
 
 	before(async function () {
-		this.vrf = await deploy('TestVRFCoordinatorV2');
-		this.serum = await deploy('Serum', 'Serum', 'SERUM');
-		this.metadata = await deploy('Metadata');
-		this.labGame = await deploy(
+		this.vrf = await deployContract('TestVRFCoordinatorV2');
+		this.serum = await deployProxy('Serum', 'Serum', 'SERUM');
+		this.metadata = await deployProxy('Metadata');
+		this.labGame = await deployProxy(
 			'LabGame',
 			'LabGame',
 			'LABGAME',
@@ -73,42 +73,42 @@ describe('LabGame', function () {
 		it('whitelist not enabled revert', async function () {
 			await expect(
 				this.labGame.connect(this.accounts[1]).whitelistMint(1, [])
-			).to.be.revertedWith('Whitelist not enabled');
+			).to.be.revertedWith('WhitelistNotEnabled');
 		});
 
 		it('not whitelisted revert', async function () {
 			await this.labGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
 			await expect(
 				this.labGame.connect(this.accounts[10]).whitelistMint(1, ["0x8a3552d60a98e0ade765adddad0a2e420ca9b1eef5f326ba7ab860bb4ea72c94","0x070e8db97b197cc0e4a1790c5e6c3667bab32d733db7f815fbe84f5824c7168d","0x90a5fdc765808e5a2e0d816f52f09820c5f167703ce08d078eb87e2c194c5525","0x6957015e8f4c2643fefe1967a4f73da161b800b8cb45e6e469217aac4d0fe5f6"])
-			).to.be.revertedWith('Account not whitelisted');
+			).to.be.revertedWith('NotWhitelisted');
 		});
 
 		it('invalid proof revert', async function () {
 			await this.labGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
 			await expect(
 				this.labGame.connect(this.accounts[3]).whitelistMint(1, ["0x8a3552d60a98e0ade765adddad0a2e420ca9b1eef5f326ba7ab860bb4ea72c94","0x070e8db97b197cc0e4a1790c5e6c3667bab32d733db7f815fbe84f5824c7168d","0x90a5fdc765808e5a2e0d816f52f09820c5f167703ce08d078eb87e2c194c5525","0x6957015e8f4c2643fefe1967a4f73da161b800b8cb45e6e469217aac4d0fe5f5"])
-			).to.be.revertedWith('Account not whitelisted');
+			).to.be.revertedWith('NotWhitelisted');
 		});
 
 		it('zero amount revert', async function () {
 			await this.labGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
 			await expect(
 				this.labGame.connect(this.accounts[3]).whitelistMint(0, ["0x8a3552d60a98e0ade765adddad0a2e420ca9b1eef5f326ba7ab860bb4ea72c94","0x070e8db97b197cc0e4a1790c5e6c3667bab32d733db7f815fbe84f5824c7168d","0x90a5fdc765808e5a2e0d816f52f09820c5f167703ce08d078eb87e2c194c5525","0x6957015e8f4c2643fefe1967a4f73da161b800b8cb45e6e469217aac4d0fe5f6"])
-			).to.be.revertedWith('Invalid mint amount');
+			).to.be.revertedWith('InvalidMintAmount');
 		});
 
 		it('greater than max amount revert', async function () {
 			await this.labGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
 			await expect(
 				this.labGame.connect(this.accounts[3]).whitelistMint(3, ["0x8a3552d60a98e0ade765adddad0a2e420ca9b1eef5f326ba7ab860bb4ea72c94","0x070e8db97b197cc0e4a1790c5e6c3667bab32d733db7f815fbe84f5824c7168d","0x90a5fdc765808e5a2e0d816f52f09820c5f167703ce08d078eb87e2c194c5525","0x6957015e8f4c2643fefe1967a4f73da161b800b8cb45e6e469217aac4d0fe5f6"])
-			).to.be.revertedWith('Invalid mint amount');
+			).to.be.revertedWith('InvalidMintAmount');
 		});
 
 		it('not enough ether revert', async function () {
 			await this.labGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
 			await expect(
 				this.labGame.connect(this.accounts[3]).whitelistMint(2, ["0x8a3552d60a98e0ade765adddad0a2e420ca9b1eef5f326ba7ab860bb4ea72c94","0x070e8db97b197cc0e4a1790c5e6c3667bab32d733db7f815fbe84f5824c7168d","0x90a5fdc765808e5a2e0d816f52f09820c5f167703ce08d078eb87e2c194c5525","0x6957015e8f4c2643fefe1967a4f73da161b800b8cb45e6e469217aac4d0fe5f6"])
-			).to.be.revertedWith('Not enough ether');
+			).to.be.revertedWith('NotEnoughEther');
 		});
 
 		it('validated success', async function () {
@@ -150,7 +150,7 @@ describe('LabGame', function () {
 					["0x8a3552d60a98e0ade765adddad0a2e420ca9b1eef5f326ba7ab860bb4ea72c94","0x070e8db97b197cc0e4a1790c5e6c3667bab32d733db7f815fbe84f5824c7168d","0x90a5fdc765808e5a2e0d816f52f09820c5f167703ce08d078eb87e2c194c5525","0x6957015e8f4c2643fefe1967a4f73da161b800b8cb45e6e469217aac4d0fe5f6"],
 					{ value: ethers.utils.parseEther('0.06') }
 				)
-			).to.be.revertedWith('Account has pending mint');
+			).to.be.revertedWith('AccountHasPendingMint');
 		});
 
 		it('account limit revert', async function () {
@@ -169,7 +169,7 @@ describe('LabGame', function () {
 					["0x8a3552d60a98e0ade765adddad0a2e420ca9b1eef5f326ba7ab860bb4ea72c94","0x070e8db97b197cc0e4a1790c5e6c3667bab32d733db7f815fbe84f5824c7168d","0x90a5fdc765808e5a2e0d816f52f09820c5f167703ce08d078eb87e2c194c5525","0x6957015e8f4c2643fefe1967a4f73da161b800b8cb45e6e469217aac4d0fe5f6"],
 					{ value: ethers.utils.parseEther('0.06') }
 				)
-			).to.be.revertedWith('Account limit exceeded');
+			).to.be.revertedWith('AccountLimitExceeded');
 		});
 	});
 
@@ -183,7 +183,7 @@ describe('LabGame', function () {
 
 		it('whitelist enabled revert', async function () {
 		await this.labGame.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
-			await expect(this.labGame.connect(this.accounts[0]).mint(1, [])).to.be.revertedWith('Whitelist is enabled');
+			await expect(this.labGame.connect(this.accounts[0]).mint(1, [])).to.be.revertedWith('WhitelistIsEnabled');
 		});
 
 		it('whitelist disabled success', async function () {
@@ -195,19 +195,19 @@ describe('LabGame', function () {
 		it('no payment revert', async function () {
 			await expect(
 				this.labGame.mint(1, [])
-			).to.be.revertedWith('Not enough ether');
+			).to.be.revertedWith('NotEnoughEther');
 		});
 
 		it('zero amount revert', async function () {
 			await expect(
 				this.labGame.mint(0, [])
-			).to.be.revertedWith('Invalid mint amount');
+			).to.be.revertedWith('InvalidMintAmount');
 		});
 
 		it('greater than max amount revert', async function () {
 			await expect(
 				this.labGame.mint(3, [])
-			).to.be.revertedWith('Invalid mint amount');
+			).to.be.revertedWith('InvalidMintAmount');
 		});
 
 		it('totalMinted includes pending', async function () {
@@ -228,7 +228,7 @@ describe('LabGame', function () {
 			await this.labGame.connect(this.accounts[1]).reveal();
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(2, [], { value: ethers.utils.parseEther('0.12') })
-			).to.be.revertedWith('Account limit exceeded');
+			).to.be.revertedWith('AccountLimitExceeded');
 		});
 
 		it('whitelist mint and regular mint success', async function () {
@@ -258,7 +258,7 @@ describe('LabGame', function () {
 
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(2, [], { value: ethers.utils.parseEther('0.12') })
-			).to.be.revertedWith('Generation limit');
+			).to.be.revertedWith('GenerationLimit');
 		});
 
 		it('not enough serum revert', async function () {
@@ -286,7 +286,7 @@ describe('LabGame', function () {
 
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(1, [])
-			).to.be.revertedWith('Invalid burn tokens');
+			).to.be.revertedWith('InvalidBurnLength');
 		});
 
 		it('nonexistent burnIds revert', async function () {
@@ -316,7 +316,7 @@ describe('LabGame', function () {
 
 			await expect(
 				this.labGame.connect(this.accounts[0]).mint(1, [1])
-			).to.be.revertedWith('Burn token not owned');
+			).to.be.revertedWith('BurnNotOwned');
 		});
 
 		it('duplicate burnIds revert', async function () {
@@ -352,7 +352,7 @@ describe('LabGame', function () {
 
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(1, [1, 2])
-			).to.be.revertedWith('Invalid burn tokens');
+			).to.be.revertedWith('InvalidBurnLength');
 		});
 
 		it('correct burnId success', async function () {
@@ -381,14 +381,14 @@ describe('LabGame', function () {
 			await this.vrf.fulfillRequests();
 			await expect(
 				this.labGame.connect(this.accounts[1]).reveal()
-			).to.be.revertedWith('No pending mint');
+			).to.be.revertedWith('AcountHasNoPendingMint');
 		});
 
 		it('not ready revert', async function() {
 			await this.labGame.connect(this.accounts[0]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await expect(
 				this.labGame.connect(this.accounts[0]).reveal()
-			).to.be.revertedWith('Reveal not ready');
+			).to.be.revertedWith('RevealNotReady');
 		});
 
 		it('receiver success', async function () {
@@ -446,7 +446,7 @@ describe('LabGame', function () {
 			expect(await this.labGame.whitelisted()).to.equal(true);
 			await expect(
 				this.labGame.connect(this.accounts[0]).enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed')
-			).to.be.revertedWith('Whitelist already enabled');
+			).to.be.revertedWith('WhitelistIsEnabled');
 		});
 
 		it('owner success', async function () {
@@ -470,7 +470,7 @@ describe('LabGame', function () {
 			expect(await this.labGame.whitelisted()).to.equal(false);
 			await expect(
 				this.labGame.connect(this.accounts[0]).disableWhitelist()
-			).to.be.revertedWith('Whitelist not enabled');
+			).to.be.revertedWith('WhitelistNotEnabled');
 		});
 
 		it('owner success', async function () {

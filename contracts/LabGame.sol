@@ -85,6 +85,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		__Ownable_init();
 		__Pausable_init();
 		__Generator_init(_vrfCoordinator, _keyHash, _subscriptionId, _callbackGasLimit);
+		__Whitelist_init();
 		// Initialize contracts
 		serum = Serum(_serum);
 		metadata = Metadata(_metadata);

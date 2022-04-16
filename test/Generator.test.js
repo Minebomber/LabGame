@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { snapshot, restore, deploy, message } = require('./util');
+const { snapshot, restore, deployContract, deployProxy } = require('./util');
 
 const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
 const SUBSCRIPTION_ID = 0;
@@ -9,8 +9,8 @@ const CALLBACK_GAS_LIMIT = 100_000;
 describe('Generator', function () {
 
 	before(async function () {
-		this.vrf = await deploy('TestVRFCoordinatorV2');
-		this.generator = await deploy(
+		this.vrf = await deployContract('TestVRFCoordinatorV2');
+		this.generator = await deployProxy(
 			'TestGenerator',
 			this.vrf.address,
 			KEY_HASH,
@@ -116,26 +116,26 @@ describe('Generator', function () {
 		it('zero account revert', async function() {
 			await expect(
 				this.generator.request('0x0000000000000000000000000000000000000000', 1, 5)
-			).to.be.revertedWith('Invalid account');
+			).to.be.revertedWith('InvalidAccount');
 		});
 
 		it('zero base revert', async function() {
 			await expect(
 				this.generator.request(this.accounts[0], 0, 5)
-			).to.be.revertedWith('Invalid base');
+			).to.be.revertedWith('InvalidRequestBase');
 		});
 		
 		it('zero count revert', async function() {
 			await expect(
 				this.generator.request(this.accounts[0], 1, 0)
-			).to.be.revertedWith('Invalid count');
+			).to.be.revertedWith('InvalidRequestCount');
 		});
 		
 		it('existing pending revert', async function() {
 			await this.generator.request(this.accounts[0], 1, 5)
 			await expect(
 				this.generator.request(this.accounts[0], 1, 5)
-			).to.be.revertedWith('Account has pending mint');
+			).to.be.revertedWith('AccountHasPendingMint');
 		});
 	});
 	
@@ -171,14 +171,14 @@ describe('Generator', function () {
 		it('no pending revert', async function() {
 			await expect(
 				this.generator.reveal(this.accounts[0])
-			).to.be.revertedWith('No pending mint');
+			).to.be.revertedWith('AcountHasNoPendingMint');
 		});
 
 		it('not fulfilled revert', async function() {
 			await this.generator.request(this.accounts[0], 1, 5)
 			await expect(
 				this.generator.reveal(this.accounts[0])
-			).to.be.revertedWith('Reveal not ready');
+			).to.be.revertedWith('RevealNotReady');
 		});
 
 	});

@@ -2,7 +2,14 @@ const { upgrades } = require("hardhat");
 
 async function deployContract(name, ...args) {
 	const factory = await ethers.getContractFactory(name);
-	console.log(`Deploying ${name}...`);
+	const contract = await upgrades.deployProxy(factory, [...args]);
+	await contract.deployed();
+	console.log(`${name} deployed to ${contract.address}`);
+	return contract;
+}
+
+async function deployProxy(name, ...args) {
+	const factory = await ethers.getContractFactory(name);
 	const contract = await upgrades.deployProxy(factory, [...args]);
 	await contract.deployed();
 	console.log(`${name} deployed to ${contract.address}`);
@@ -18,15 +25,15 @@ async function main() {
 	const TestVRFCoordinator = await deployContract(
 		'TestVRFCoordinatorV2'
 	);
-	const Serum = await deployContract(
+	const Serum = await deployProxy(
 		'Serum',
 		'Serum',
 		'SERUM'
 	);
-	const Metadata = await deployContract(
+	const Metadata = await deployProxy(
 		'Metadata'
 	);
-	const LabGame = await deployContract(
+	const LabGame = await deployProxy(
 		'LabGame',
 		'LabGame',
 		'LABGAME',
@@ -37,7 +44,7 @@ async function main() {
 		SUBSCRIPTION_ID,
 		CALLBACK_GAS_LIMIT
 	);
-	const Blueprint = await deployContract(
+	const Blueprint = await deployProxy(
 		'Blueprint',
 		'Blueprint',
 		'BLUEPRINT',
@@ -48,7 +55,7 @@ async function main() {
 		SUBSCRIPTION_ID,
 		CALLBACK_GAS_LIMIT
 	);
-	const Laboratory = await deployContract(
+	const Laboratory = await deployProxy(
 		'Laboratory',
 		'Laboratory',
 		'LABORATORY',

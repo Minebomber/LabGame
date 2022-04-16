@@ -3,7 +3,8 @@ const { ethers } = require('hardhat');
 const {
 	snapshot,
 	restore,
-	deploy,
+	deployContract,
+	deployProxy,
 	increaseTime,
 	impersonateAccount,
 	message,
@@ -15,10 +16,10 @@ describe('Blueprint', function () {
 	const CALLBACK_GAS_LIMIT = 100_000;
 
 	before(async function () {
-		this.vrf = await deploy('TestVRFCoordinatorV2');
-		this.serum = await deploy('Serum', 'Serum', 'SERUM');
-		this.metadata = await deploy('Metadata');
-		this.labGame = await deploy(
+		this.vrf = await deployContract('TestVRFCoordinatorV2');
+		this.serum = await deployProxy('Serum', 'Serum', 'SERUM');
+		this.metadata = await deployProxy('Metadata');
+		this.labGame = await deployProxy(
 			'LabGame',
 			'LabGame',
 			'LABGAME',
@@ -29,7 +30,7 @@ describe('Blueprint', function () {
 			SUBSCRIPTION_ID,
 			CALLBACK_GAS_LIMIT
 		);
-		this.blueprint = await deploy(
+		this.blueprint = await deployProxy(
 			'Blueprint',
 			'Blueprint',
 			'BLUEPRINT',
@@ -103,11 +104,11 @@ describe('Blueprint', function () {
 
 	describe('claim', function () {
 		it('no gen3 owned revert', async function() {
-			await expect(this.blueprint.connect(this.accounts[1]).claim()).to.be.revertedWith('AcountHasNoPendingMint("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")');
+			await expect(this.blueprint.connect(this.accounts[1]).claim()).to.be.revertedWith('NoClaimAvailable');
 		});
 		
 		it('nothing to claim revert', async function() {
-			await expect(this.blueprint.claim()).to.be.revertedWith('Nothing to claim');
+			await expect(this.blueprint.claim()).to.be.revertedWith('NoClaimAvailable');
 		});
 
 		it('totalMinted updates with pending mint', async function() {
@@ -139,19 +140,19 @@ describe('Blueprint', function () {
 
 	describe('reveal', function () {
 		it('no pending revert', async function () {
-			await expect(this.blueprint.reveal()).to.be.revertedWith('AcountHasNoPendingMint("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")');
+			await expect(this.blueprint.reveal()).to.be.revertedWith('AcountHasNoPendingMint');
 		});
 
 		it('not ready revert', async function () {
 			await increaseTime(172801);
 			await this.blueprint.claim();
-			await expect(this.blueprint.reveal()).to.be.revertedWith('Reveal not ready');
+			await expect(this.blueprint.reveal()).to.be.revertedWith('RevealNotReady');
 		});
 	});
 
 	describe('initializeClaim', function () {
 		it('non-LabGame revert', async function () {
-			await expect(this.blueprint.initializeClaim(1)).to.be.revertedWith('Not authorized');
+			await expect(this.blueprint.initializeClaim(1)).to.be.revertedWith('NotAuthorized');
 		});
 		
 		it('LabGame success', async function () {
@@ -163,7 +164,7 @@ describe('Blueprint', function () {
 
 	describe('updateClaim', function () {
 		it('non-LabGame revert', async function () {
-			await expect(this.blueprint.updateClaim(this.accounts[0].address, 12)).to.be.revertedWith('Not authorized');
+			await expect(this.blueprint.updateClaim(this.accounts[0].address, 12)).to.be.revertedWith('NotAuthorized');
 		});
 		
 		it('LabGame success', async function () {

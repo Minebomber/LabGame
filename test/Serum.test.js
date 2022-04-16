@@ -3,7 +3,8 @@ const { ethers } = require('hardhat');
 const {
 	snapshot,
 	restore,
-	deploy,
+	deployContract,
+	deployProxy,
 	impersonateAccount,
 	message,
 } = require('./util');
@@ -14,10 +15,10 @@ describe('Serum', function () {
 	const CALLBACK_GAS_LIMIT = 100_000;
 
 	before(async function () {
-		this.vrf = await deploy('TestVRFCoordinatorV2');
-		this.serum = await deploy('Serum', 'Serum', 'SERUM');
-		this.metadata = await deploy('Metadata');
-		this.labGame = await deploy(
+		this.vrf = await deployContract('TestVRFCoordinatorV2');
+		this.serum = await deployProxy('Serum', 'Serum', 'SERUM');
+		this.metadata = await deployProxy('Metadata');
+		this.labGame = await deployProxy(
 			'LabGame',
 			'LabGame',
 			'LABGAME',
@@ -68,7 +69,7 @@ describe('Serum', function () {
 		it('no owned revert', async function () {
 			await expect(
 				this.serum.claim()
-			).to.be.revertedWith('Nothing to claim');
+			).to.be.revertedWith('NoClaimAvailable');
 		});
 	});
 
@@ -88,7 +89,7 @@ describe('Serum', function () {
 
 			await expect(
 				this.serum.initializeClaim(0)
-			).to.be.revertedWith('Not authorized');
+			).to.be.revertedWith('NotAuthorized');
 		});
 
 		it('LabGame success', async function () {
@@ -110,7 +111,7 @@ describe('Serum', function () {
 
 			await expect(
 				this.serum.initializeClaim(0)
-			).to.be.revertedWith('Not authorized');
+			).to.be.revertedWith('NotAuthorized');
 		});
 
 		it('LabGame success', async function () {
