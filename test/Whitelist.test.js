@@ -19,7 +19,9 @@ describe('Whitelist', function () {
 	describe('_enableWhitelist', function () {
 		it('whitelist enabled', async function () {
 			expect(await this.whitelist.whitelisted()).to.equal(false);
-			await this.whitelist.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
+			await expect(
+				this.whitelist.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed')
+			).to.emit(this.whitelist, 'WhitelistEnabled');
 			expect(await this.whitelist.whitelisted()).to.equal(true);
 		});
 		
@@ -38,7 +40,9 @@ describe('Whitelist', function () {
 			expect(await this.whitelist.whitelisted()).to.equal(false);
 			await this.whitelist.enableWhitelist('0xa2720bf73072150e787f41f9ca5a9aaf9726d96ee6e786f9920eae0a83b2abed');
 			expect(await this.whitelist.whitelisted()).to.equal(true);
-			await this.whitelist.disableWhitelist();
+			await expect(
+				this.whitelist.disableWhitelist()
+			).to.emit(this.whitelist, 'WhitelistDisabled');
 			expect(await this.whitelist.whitelisted()).to.equal(false);
 		});
 
