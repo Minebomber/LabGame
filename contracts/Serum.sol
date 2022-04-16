@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "./openzeppelin/token/ERC20/ERC20Upgradeable.sol";
+import "./openzeppelin/access/AccessControlUpgradeable.sol";
+import "./openzeppelin/security/PausableUpgradeable.sol";
 import "./interface/IClaimable.sol";
 
 import "./LabGame.sol";

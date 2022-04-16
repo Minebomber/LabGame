@@ -169,7 +169,7 @@ describe('LabGame', function () {
 					["0x8a3552d60a98e0ade765adddad0a2e420ca9b1eef5f326ba7ab860bb4ea72c94","0x070e8db97b197cc0e4a1790c5e6c3667bab32d733db7f815fbe84f5824c7168d","0x90a5fdc765808e5a2e0d816f52f09820c5f167703ce08d078eb87e2c194c5525","0x6957015e8f4c2643fefe1967a4f73da161b800b8cb45e6e469217aac4d0fe5f6"],
 					{ value: ethers.utils.parseEther('0.06') }
 				)
-			).to.be.revertedWith('AccountLimitExceeded');
+			).to.be.revertedWith('LimitExceeded');
 		});
 	});
 
@@ -228,7 +228,7 @@ describe('LabGame', function () {
 			await this.labGame.connect(this.accounts[1]).reveal();
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(2, [], { value: ethers.utils.parseEther('0.12') })
-			).to.be.revertedWith('AccountLimitExceeded');
+			).to.be.revertedWith('LimitExceeded');
 		});
 
 		it('whitelist mint and regular mint success', async function () {

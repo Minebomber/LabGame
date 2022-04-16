@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "./openzeppelin/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "./openzeppelin/access/OwnableUpgradeable.sol";
+import "./openzeppelin/security/PausableUpgradeable.sol";
 import "./abstract/Generator.sol";
 import "./abstract/Whitelist.sol";
 
@@ -13,7 +13,7 @@ import "./Blueprint.sol";
 
 error NotWhitelisted(address _account);
 error InvalidMintAmount(uint256 _amount);
-error AccountLimitExceeded(address _account);
+error LimitExceeded(address _account);
 error SoldOut();
 error GenerationLimit(uint256 _generation);
 error NotEnoughEther(uint256 _given, uint256 _expected);
@@ -103,7 +103,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		if (!whitelisted) revert WhitelistNotEnabled();
 		if (!_whitelisted(_msgSender(), _merkleProof)) revert NotWhitelisted(_msgSender());
 		if (_amount == 0 || _amount > MINT_LIMIT) revert InvalidMintAmount(_amount);
-		if (balanceOf(_msgSender()) + _amount > MINT_LIMIT) revert AccountLimitExceeded(_msgSender());
+		if (balanceOf(_msgSender()) + _amount > MINT_LIMIT) revert LimitExceeded(_msgSender());
 		// Verify generation
 		uint256 id = totalMinted();
 		if (id >= GEN0_MAX) revert SoldOut();
@@ -136,7 +136,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 			if (msg.value < _amount * GEN0_PRICE) revert NotEnoughEther(msg.value, _amount * GEN0_PRICE);
 			// Account limit of MINT_LIMIT not including whitelist mints
 			if (balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount > MINT_LIMIT)
-				revert AccountLimitExceeded(_msgSender());
+				revert LimitExceeded(_msgSender());
 
 		// Generation 1
 		} else if (id < GEN1_MAX) {
@@ -157,20 +157,21 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		}
 
 		// Burn tokens to mint gen 1 and 2
+		uint256 burnLength = _burnIds.length;
 		if (generation == 1 || generation == 2) {
-			if (_burnIds.length != _amount) revert InvalidBurnLength(_burnIds.length, _amount);
-			for (uint256 i; i < _burnIds.length; i++) {
+			if (burnLength != _amount) revert InvalidBurnLength(burnLength, _amount);
+			for (uint256 i; i < burnLength; i++) {
 				// Verify token to be burned
 				if (_msgSender() != ownerOf(_burnIds[i])) revert BurnNotOwned(_msgSender(), _burnIds[i]);
 				if (tokens[_burnIds[i]] & 3 != generation - 1) revert InvalidBurnGeneration(tokens[_burnIds[i]] & 3, generation - 1);
 				_burn(_burnIds[i]);
 			}
 			// Add burned tokens to id offset
-			tokenOffset += _burnIds.length;
+			tokenOffset += burnLength;
 
 		// Generation 0 & 3 no burn needed
 		} else {
-			if (_burnIds.length != 0) revert InvalidBurnLength(_burnIds.length, 0);
+			if (burnLength != 0) revert InvalidBurnLength(burnLength, 0);
 		}
 		
 		// Request token mint
@@ -195,10 +196,9 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 */
 	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
 		// Select traits and mint token
-		uint256 token = _generate(_tokenId, _seed);
 		_safeMint(_msgSender(), _tokenId);
 		// Setup serum claim for the token
-		if (token & 0xFF == 3)
+		if (_generate(_tokenId, _seed) & 0xFF == 3)
 			blueprint.initializeClaim(_tokenId);
 		else
 			serum.initializeClaim(_tokenId);
