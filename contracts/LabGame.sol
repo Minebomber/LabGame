@@ -99,7 +99,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 */
 	function whitelistMint(uint256 _amount, bytes32[] calldata _merkleProof) external payable whenNotPaused zeroPending(_msgSender()) {
 		// Verify account & amount
-		if (!whitelisted) revert WhitelistNotEnabled();
+		if (!whitelisted()) revert WhitelistNotEnabled();
 		if (!_whitelisted(_msgSender(), _merkleProof)) revert NotWhitelisted(_msgSender());
 		if (_amount == 0 || _amount > MINT_LIMIT) revert InvalidMintAmount(_amount);
 		if (balanceOf(_msgSender()) + _amount > MINT_LIMIT) revert LimitExceeded(_msgSender());
@@ -120,7 +120,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _burnIds Token Ids to burn as payment (for gen 1 & 2)
 	 */
 	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused zeroPending(_msgSender()) {
-		if (whitelisted) revert WhitelistIsEnabled();
+		if (whitelisted()) revert WhitelistIsEnabled();
 		// Verify amount
 		if (_amount == 0 || _amount > MINT_LIMIT) revert InvalidMintAmount(_amount);
 		// Verify generation and price

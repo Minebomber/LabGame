@@ -8,7 +8,6 @@ error WhitelistIsEnabled();
 error WhitelistNotEnabled();
 
 abstract contract Whitelist is Initializable {
-	bool public whitelisted;
 	bytes32 internal merkleRoot;
 
 	event WhitelistEnabled();
@@ -16,6 +15,10 @@ abstract contract Whitelist is Initializable {
 
 	/** Whitelist contstructor (empty) */
 	function __Whitelist_init() internal onlyInitializing {}
+
+	function whitelisted() public view returns (bool) {
+		return merkleRoot != bytes32(0);
+	}
 
 	/**
 	 * Checks if an account is whitelisted using the given proof
@@ -31,9 +34,8 @@ abstract contract Whitelist is Initializable {
 	 * @param _merkleRoot Whitelist merkle tree root hash
 	 */
 	function _enableWhitelist(bytes32 _merkleRoot) internal {
-		if (whitelisted) revert WhitelistIsEnabled();
+		if (whitelisted()) revert WhitelistIsEnabled();
 		merkleRoot = _merkleRoot;
-		whitelisted = true;
 		emit WhitelistEnabled();
 	}
 
@@ -41,9 +43,8 @@ abstract contract Whitelist is Initializable {
 	 * Disable the whitelist and clear the root hash
 	 */
 	function _disableWhitelist() internal {
-		if (!whitelisted) revert WhitelistNotEnabled();
+		if (!whitelisted()) revert WhitelistNotEnabled();
 		delete merkleRoot;
-		delete whitelisted;
 		emit WhitelistDisabled();
 	}
 
@@ -52,5 +53,5 @@ abstract contract Whitelist is Initializable {
 	 * variables without shifting down storage in the inheritance chain.
 	 * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
 	 */
-	uint256[48] private __gap;
+	uint256[49] private __gap;
 }
