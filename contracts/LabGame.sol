@@ -41,13 +41,13 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 
 	uint256 constant MAX_TRAITS = 17;
 	uint256 constant TYPE_OFFSET = 9;
-
+	/*
 	struct Token {
 		uint8 data;
 		uint8[9] trait;
 	}
-
-	mapping(uint256 => Token) tokens;
+	*/
+	mapping(uint256 => uint256) tokens;
 	mapping(uint256 => uint256) hashes;
 	mapping(address => uint256) whitelistMints;
 
@@ -168,7 +168,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 			for (uint256 i; i < _burnIds.length; i++) {
 				// Verify token to be burned
 				if (_msgSender() != ownerOf(_burnIds[i])) revert BurnNotOwned(_msgSender(), _burnIds[i]);
-				if (tokens[_burnIds[i]].data & 3 != generation - 1) revert InvalidBurnGeneration(tokens[_burnIds[i]].data & 3, generation - 1);
+				if (tokens[_burnIds[i]] & 3 != generation - 1) revert InvalidBurnGeneration(tokens[_burnIds[i]] & 3, generation - 1);
 				_burn(_burnIds[i]);
 			}
 			// Add burned tokens to id offset
@@ -201,10 +201,10 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 */
 	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
 		// Select traits and mint token
-		Token memory token = _generate(_tokenId, _seed);
+		uint256 token = _generate(_tokenId, _seed);
 		_safeMint(_msgSender(), _tokenId);
 		// Setup serum claim for the token
-		if (token.data == 3)
+		if (token & 0xFF == 3)
 			blueprint.initializeClaim(_tokenId);
 		else
 			serum.initializeClaim(_tokenId);
@@ -228,7 +228,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _tokenId Token ID to query
 	 * @return Token structure
 	 */
-	function getToken(uint256 _tokenId) external view returns (Token memory) {
+	function getToken(uint256 _tokenId) external view returns (uint256) {
 		if (!_exists(_tokenId)) revert DoesNotExist(_tokenId);
 		return tokens[_tokenId];
 	}
@@ -241,7 +241,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 */
 	function transferFrom(address _from, address _to, uint256 _tokenId) public override (ERC721Upgradeable, IERC721Upgradeable)  {
 		// Update blueprint claim for gen3 scientists
-		if (tokens[_tokenId].data == 3)
+		if (tokens[_tokenId] & 0xFF == 3)
 			blueprint.updateClaim(_from, _tokenId);
 		// Other tokens update serum claim
 		else
@@ -259,7 +259,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 */
 	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) public override (ERC721Upgradeable, IERC721Upgradeable) {
 		// Update blueprint claim for gen3 scientists
-		if (tokens[_tokenId].data == 3)
+		if (tokens[_tokenId] & 0xFF == 3)
 			blueprint.updateClaim(_from, _tokenId);
 		// Other tokens update serum claim
 		else
@@ -277,7 +277,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _seed Random seed
 	 * @return token Generated token
 	 */
-	function _generate(uint256 _tokenId, uint256 _seed) internal returns (Token memory token) {
+	function _generate(uint256 _tokenId, uint256 _seed) internal returns (uint256 token) {
 		// Calculate generation of token
 		uint256 generation;
 		if (_tokenId <= GEN0_MAX) {}
@@ -305,15 +305,15 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _generation Token generation
 	 * @return token Token data structure
 	 */
-	function _selectTraits(uint256 _seed, uint256 _generation) internal view returns (Token memory token) {
+	function _selectTraits(uint256 _seed, uint256 _generation) internal view returns (uint256 token) {
 		// Set token generation and isMutant in data field
-		token.data = uint8(_generation);
-		token.data |= (((_seed & 0xFFFF) % 10) == 0) ? 128 : 0;
+		token = _generation;
+		token |= (((_seed & 0xFFFF) % 10) == 0) ? 128 : 0;
 		// Loop over tokens traits (9 scientist, 8 mutant)
-		(uint256 start, uint256 count) = ((token.data & 128) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
+		(uint256 start, uint256 count) = (token & 128 != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		for (uint256 i; i < count; i++) {
 			_seed >>= 16;
-			token.trait[i] = _selectTrait(_seed & 0xFFFF, start + i);
+			token |= _selectTrait(_seed & 0xFFFF, start + i) << (8 * i + 8);
 		}
 	}
 
@@ -323,11 +323,9 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _trait Trait to select
 	 * @return Index of the selected trait
 	 */
-	function _selectTrait(uint256 _seed, uint256 _trait) internal view returns (uint8) {
+	function _selectTrait(uint256 _seed, uint256 _trait) internal view returns (uint256) {
 		uint256 i = (_seed & 0xFF) % rarities[_trait].length;
-		return (((_seed >> 8) & 0xFF) < rarities[_trait][i]) ?
-			uint8(i) :
-			aliases[_trait][i];
+		return (((_seed >> 8) & 0xFF) < rarities[_trait][i]) ? i : aliases[_trait][i];
 	}
 
 	/**
@@ -335,11 +333,8 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _token Token data to hash
 	 * @return Keccak hash of the token data
 	 */
-	function _hashToken(Token memory _token) internal pure returns (uint256) {
-		return uint256(keccak256(abi.encodePacked(
-			_token.data,
-			_token.trait
-		)));
+	function _hashToken(uint256 _token) internal pure returns (uint256) {
+		return uint256(keccak256(abi.encodePacked(_token)));
 	}
 
 	// -- OWNER --

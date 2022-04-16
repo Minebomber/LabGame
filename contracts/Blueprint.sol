@@ -81,9 +81,9 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 		uint256 count = labGame.balanceOf(_msgSender());
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
-			LabGame.Token memory token = labGame.getToken(tokenId);
+			uint256 token = labGame.getToken(tokenId);
 			// Only Gen3 scientists are claimed
-			if (token.data == 3) {
+			if (token & 0xFF == 3) {
 				amount += (block.timestamp - tokenClaims[tokenId]) / CLAIM_PERIOD;
 				tokenClaims[tokenId] = block.timestamp;
 			}
@@ -110,9 +110,9 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 		uint256 count = labGame.balanceOf(_account);
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_account, i);
-			LabGame.Token memory token = labGame.getToken(tokenId);
+			uint256 token = labGame.getToken(tokenId);
 			// Only Gen3 scientists are included
-			if (token.data == 3) {
+			if (token & 0xFF == 3) {
 				amount += (block.timestamp - tokenClaims[tokenId]) / CLAIM_PERIOD;
 			}
 		}

@@ -61,10 +61,10 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 		// Iterate wallet for scientists
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
-			LabGame.Token memory token = labGame.getToken(tokenId);
+			uint256 token = labGame.getToken(tokenId);
 			// Claim only Gen 0-2 scientists
-			if (token.data < 3) {
-				amount += _claimScientist(tokenId, token.data);
+			if (token & 0xFF < 3) {
+				amount += _claimScientist(tokenId, token & 3);
 			}
 		}
 		// Pay mutant tax
@@ -72,9 +72,9 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 		// Iterate wallet for mutants
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
-			LabGame.Token memory token = labGame.getToken(tokenId);
-			if ((token.data & 128) != 0)
-				amount += _claimMutant(tokenId, token.data & 3);
+			uint256 token = labGame.getToken(tokenId);
+			if (token & 128 != 0)
+				amount += _claimMutant(tokenId, token & 3);
 		}
 		// Include pending claim balance
 		amount += pendingClaims[_msgSender()];
@@ -95,13 +95,13 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 		uint256 untaxed;
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_account, i);
-			LabGame.Token memory token = labGame.getToken(tokenId);
-			if ((token.data & 128) != 0)
-				amount += mutantEarnings[token.data & 3] - tokenClaims[tokenId];
-			else if (token.data < 3)
+			uint256 token = labGame.getToken(tokenId);
+			if (token & 128 != 0)
+				amount += mutantEarnings[token & 3] - tokenClaims[tokenId];
+			else if (token & 0xFF < 3)
 				untaxed +=
 					(block.timestamp - tokenClaims[tokenId]) * 
-					[ GEN0_RATE, GEN1_RATE, GEN2_RATE, 0 ][token.data & 3] / 
+					[ GEN0_RATE, GEN1_RATE, GEN2_RATE, 0 ][token & 3] / 
 					CLAIM_PERIOD;
 		}
 		amount += _pendingTax(untaxed);
@@ -121,11 +121,11 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 	 * @param _tokenId ID of the token
 	 */
 	function initializeClaim(uint256 _tokenId) external override onlyLabGame whenNotPaused {
-		LabGame.Token memory token = labGame.getToken(_tokenId);
-		if ((token.data & 128) != 0) {
-			tokenClaims[_tokenId] = mutantEarnings[token.data & 3];
-			mutantCounts[token.data & 3]++;
-		} else if (token.data < 3) {
+		uint256 token = labGame.getToken(_tokenId);
+		if (token & 128 != 0) {
+			tokenClaims[_tokenId] = mutantEarnings[token & 3];
+			mutantCounts[token & 3]++;
+		} else if (token & 0xFF < 3) {
 			tokenClaims[_tokenId] = block.timestamp;
 		}
 	}
@@ -140,11 +140,11 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 		if (_account != labGame.ownerOf(_tokenId)) revert NotOwned(_msgSender(), _tokenId);
 		uint256 amount;
 		// Claim the token
-		LabGame.Token memory token = labGame.getToken(_tokenId);
-		if ((token.data & 128) != 0) {
-			amount = _claimMutant(_tokenId, token.data & 3);
-		} else if (token.data < 3) {
-			amount = _claimScientist(_tokenId, token.data & 3);
+		uint256 token = labGame.getToken(_tokenId);
+		if ((token & 128) != 0) {
+			amount = _claimMutant(_tokenId, token & 3);
+		} else if (token & 0xFF < 3) {
+			amount = _claimScientist(_tokenId, token & 3);
 			amount = _payTax(amount);
 		}
 		// Save to pending balance

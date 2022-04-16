@@ -42,11 +42,11 @@ contract Metadata is OwnableUpgradeable {
 	 * @return token metadata as a base64 json uri
 	 */
 	function tokenURI(uint256 _tokenId) external view returns (string memory) {
-		LabGame.Token memory token = labGame.getToken(_tokenId);
+		uint256 token = labGame.getToken(_tokenId);
 		return string(abi.encodePacked(
 			'data:application/json;base64,',
 			abi.encodePacked(
-				'{"name":"', ((token.data & 128) != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', _tokenId.toString(),
+				'{"name":"', (token & 128 != 0) ? TYPE1_NAME : TYPE0_NAME, ' #', _tokenId.toString(),
 				'","description":"', DESCRIPTION,
 				'","image":"data:image/svg+xml;base64,', _image(token).encode(),
 				'","attributes":', _attributes(token),
@@ -62,14 +62,14 @@ contract Metadata is OwnableUpgradeable {
 	 * @param _token token data
 	 * @return SVG image string for the token
 	 */
-	function _image(LabGame.Token memory _token) internal view returns (bytes memory) {
-		(uint256 start, uint256 count) = ((_token.data & 128) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
+	function _image(uint256 _token) internal view returns (bytes memory) {
+		(uint256 start, uint256 count) = (_token & 128 != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		bytes memory images;
 		for (uint256 i; i < count; i++) {
 			images = abi.encodePacked(
 				images,
 				'<image x="0" y="0" width="', IMAGE_WIDTH, '" height="', IMAGE_HEIGHT, '" image-rendering="pixelated" preserveAspectRatio="xMidYMid" href="data:image/png;base64,',
-				traits[start + i][_token.trait[i]].image,
+				traits[start + i][(_token >> (8 * i + 8)) & 0xFF].image,
 				'"/>'
 			);
 		}
@@ -85,7 +85,7 @@ contract Metadata is OwnableUpgradeable {
 	 * @param _token token data
 	 * @return JSON string of token attributes
 	 */
-	function _attributes(LabGame.Token memory _token) internal view returns (bytes memory) {
+	function _attributes(uint256 _token) internal view returns (bytes memory) {
 		string[MAX_TRAITS] memory TRAIT_NAMES = [
 			"Background",
 			"Scientist Type",
@@ -106,7 +106,7 @@ contract Metadata is OwnableUpgradeable {
 			"Arm"
 		];
 
-		(uint256 start, uint256 count) = ((_token.data & 128) != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
+		(uint256 start, uint256 count) = (_token & 128 != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		bytes memory attributes;
 		for (uint256 i; i < count; i++) {
 			attributes = abi.encodePacked(
@@ -114,14 +114,14 @@ contract Metadata is OwnableUpgradeable {
 				'{"trait_type":"',
 				TRAIT_NAMES[start + i],
 				'","value":"',
-				traits[start + i][_token.trait[i]].name,
+				traits[start + i][(_token >> (8 * i + 8)) & 0xFF].name,
 				'"},'
 			);
 		}
 		return abi.encodePacked(
 			'[', attributes,
-			'{"trait_type":"Generation", "value":"', uint256(_token.data & 3).toString(), '"},',
-			'{"trait_type":"Type","value":"', ((_token.data & 128) != 0) ? TYPE1_NAME : TYPE0_NAME, '"}]'
+			'{"trait_type":"Generation", "value":"', uint256(_token & 3).toString(), '"},',
+			'{"trait_type":"Type","value":"', (_token & 128 != 0) ? TYPE1_NAME : TYPE0_NAME, '"}]'
 		);
 	}
 
