@@ -7,9 +7,6 @@ import "@openzeppelin/contracts-upgradeable/utils/Base64Upgradeable.sol";
 
 import "./interface/ILabGame.sol";
 
-error InvalidTrait(uint256 _trait);
-error ZeroAddress();
-
 contract Metadata is OwnableUpgradeable {
 	using StringsUpgradeable for uint256;
 	using Base64Upgradeable for bytes;
@@ -20,8 +17,8 @@ contract Metadata is OwnableUpgradeable {
 	string constant TYPE0_NAME = "Scientist";
 	string constant TYPE1_NAME = "Mutant";
 	string constant DESCRIPTION = "All the metadata and images are generated and stored 100% on-chain. No IPFS. NO API. Just the Ethereum blockchain.";
-	string constant IMAGE_WIDTH = "40";
-	string constant IMAGE_HEIGHT = "40";
+	string constant IMAGE_WIDTH = "50";
+	string constant IMAGE_HEIGHT = "50";
 
 	struct Trait {
 		string name;
@@ -89,14 +86,14 @@ contract Metadata is OwnableUpgradeable {
 	function _attributes(uint256 _token) internal view returns (bytes memory) {
 		string[MAX_TRAITS] memory TRAIT_NAMES = [
 			"Background",
-			"Scientist Type",
-			"Shoes",
-			"Shirt",
+			"Outline",
 			"Pants",
-			"Coat",
-			"Goggles",
+			"Shirt",
+			"Lab Coat",
+			"Shoes",
 			"Hair",
-			"Serum",
+			"Eye Accessory",
+			"Mouth Accessory",
 			"Background",
 			"Mutant Color",
 			"Human Type",
@@ -129,14 +126,23 @@ contract Metadata is OwnableUpgradeable {
 	// -- OWNER --
 	
 	/**
-	 * Set trait data for trait
-	 * @param _trait index of trait
+	 * Set trait data for layer
+	 * @param _layer layer index
 	 * @param _traits trait data
 	 */
-	function setTraits(uint256 _trait, Trait[] calldata _traits) external onlyOwner {
-		if (_trait >= MAX_TRAITS) revert InvalidTrait(_trait);
+	function setTraits(uint256 _layer, Trait[] calldata _traits) external onlyOwner {
 		for (uint256 i; i < _traits.length; i++)
-			traits[_trait][i] = _traits[i];
+			traits[_layer][i] = _traits[i];
+	}
+	
+	/**
+	 * Set trait data for layer
+	 * @param _layer layer index
+	 * @param _trait trait index
+	 * @param _data trait data
+	 */
+	function setTrait(uint256 _layer, uint256 _trait, Trait calldata _data) external onlyOwner {
+		traits[_layer][_trait] = _data;
 	}
 
 	/**
@@ -144,7 +150,6 @@ contract Metadata is OwnableUpgradeable {
 	 * @param _labGame new address
 	 */
 	function setLabGame(address _labGame) external onlyOwner {
-		if (_labGame == address(0)) revert ZeroAddress();
 		labGame = ILabGame(_labGame);
 	}
 }
