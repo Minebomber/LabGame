@@ -42,7 +42,6 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	uint256 constant TYPE_OFFSET = 9;
 
 	mapping(uint256 => uint256) tokens;
-	mapping(bytes32 => uint256) hashes;
 	mapping(address => uint256) whitelistMints;
 
 	uint256 tokenOffset;
@@ -194,10 +193,20 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _seed Random seed
 	 */
 	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
+		// Calculate generation of token
+		uint256 generation;
+		if (_tokenId <= GEN0_MAX) {}
+		else if (_tokenId <= GEN1_MAX) generation = 1;
+		else if (_tokenId <= GEN2_MAX) generation = 2;
+		else if (_tokenId <= GEN3_MAX) generation = 3;
+		// Select traits with given seed
+		uint256 token = _selectTraits(_seed, generation);
+		// Update save data and mark hash as used
+		tokens[_tokenId] = token;
 		// Select traits and mint token
 		_safeMint(_msgSender(), _tokenId);
 		// Setup serum claim for the token
-		if (_generate(_tokenId, _seed) & 0xFF == 3)
+		if (token & 0xFF == 3)
 			blueprint.initializeClaim(_tokenId);
 		else
 			serum.initializeClaim(_tokenId);
@@ -268,35 +277,6 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 
 	// -- INTERNAL --
 
-  /**
-	 * Generate the traits of a random token
-	 * Retries until a unique one is generated
-	 * @param _tokenId ID of token to generate
-	 * @param _seed Random seed
-	 * @return token Generated token
-	 */
-	function _generate(uint256 _tokenId, uint256 _seed) internal returns (uint256 token) {
-		// Calculate generation of token
-		uint256 generation;
-		if (_tokenId <= GEN0_MAX) {}
-		else if (_tokenId <= GEN1_MAX) generation = 1;
-		else if (_tokenId <= GEN2_MAX) generation = 2;
-		else if (_tokenId <= GEN3_MAX) generation = 3;
-		// Select traits with given seed
-		token = _selectTraits(_seed, generation);
-		bytes32 hash = _hashToken(token);
-		// While traits are not unique
-		while (hashes[hash] != 0) {
-			// Hash seed and try again
-			_seed = uint256(keccak256(abi.encodePacked(_seed)));
-			token = _selectTraits(_seed, generation);
-			hash = _hashToken(token);
-		}
-		// Update save data and mark hash as used
-		tokens[_tokenId] = token;
-		hashes[hash] = _tokenId;
-	}
-
 	/**
 	 * Randomly select token traits using a random seed
 	 * @param _seed Random seed
@@ -324,15 +304,6 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	function _selectTrait(uint256 _seed, uint256 _trait) internal view returns (uint256) {
 		uint256 i = (_seed & 0xFF) % rarities[_trait].length;
 		return (((_seed >> 8) & 0xFF) < rarities[_trait][i]) ? i : aliases[_trait][i];
-	}
-
-	/**
-	 * Hash the data of a token
-	 * @param _token Token data to hash
-	 * @return Keccak hash of the token data
-	 */
-	function _hashToken(uint256 _token) internal pure returns (bytes32) {
-		return keccak256(abi.encodePacked(_token));
 	}
 
 	// -- OWNER --

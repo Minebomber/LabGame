@@ -21,8 +21,8 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 
 	uint256 constant GEN0_TAX = 100; // 10.0%
 	uint256 constant GEN1_TAX = 125; // 12.5%
-	uint256 constant GEN2_TAX = 150; // 12.5%
-	uint256 constant GEN3_TAX = 200; // 12.5%
+	uint256 constant GEN2_TAX = 150; // 15.0%
+	uint256 constant GEN3_TAX = 200; // 20.0%
 
 	uint256 constant CLAIM_PERIOD = 1 days;
 
