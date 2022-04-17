@@ -215,31 +215,6 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	}
 
 	/**
-	 * Generate and mint pending token using random seed
-	 * @param _tokenId Token ID to reveal
-	 * @param _seed Random seed
-	 */
-	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
-		// Calculate generation of token
-		uint256 generation;
-		if (_tokenId <= GEN0_MAX) {}
-		else if (_tokenId <= GEN1_MAX) generation = 1;
-		else if (_tokenId <= GEN2_MAX) generation = 2;
-		else if (_tokenId <= GEN3_MAX) generation = 3;
-		// Select traits with given seed
-		uint256 token = _selectTraits(_seed, generation);
-		// Update save data and mark hash as used
-		tokens[_tokenId] = token;
-		// Select traits and mint token
-		_safeMint(_msgSender(), _tokenId);
-		// Setup serum claim for the token
-		if (token & 0xFF == 3)
-			blueprint.initializeClaim(_tokenId);
-		else
-			serum.initializeClaim(_tokenId);
-	}
-
-	/**
 	 * Get the metadata uri for a token
 	 * @param _tokenId Token ID to query
 	 * @return Token metadata json URI
@@ -305,14 +280,18 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	// -- INTERNAL --
 
 	/**
-	 * Randomly select token traits using a random seed
+	 * Generate and mint pending token using random seed
+	 * @param _tokenId Token ID to reveal
 	 * @param _seed Random seed
-	 * @param _generation Token generation
-	 * @return token Token data structure
 	 */
-	function _selectTraits(uint256 _seed, uint256 _generation) internal view returns (uint256 token) {
-		// Set token generation and isMutant in data field
-		token = _generation;
+	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
+		// Calculate generation of token
+		uint256 token;
+		if (_tokenId <= GEN0_MAX) {}
+		else if (_tokenId <= GEN1_MAX) token = 1;
+		else if (_tokenId <= GEN2_MAX) token = 2;
+		else if (_tokenId <= GEN3_MAX) token = 3;
+		// Select traits with given seed
 		token |= (((_seed & 0xFFFF) % 10) == 0) ? 128 : 0;
 		// Loop over tokens traits (9 scientist, 8 mutant)
 		(uint256 start, uint256 count) = (token & 128 != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
@@ -320,6 +299,15 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 			_seed >>= 16;
 			token |= _selectTrait(_seed & 0xFFFF, start + i) << (8 * i + 8);
 		}
+		// Save traits
+		tokens[_tokenId] = token;
+		// Mint
+		_safeMint(_msgSender(), _tokenId);
+		// Setup serum/blueprint claim for the token
+		if (token & 0xFF == 3)
+			blueprint.initializeClaim(_tokenId);
+		else
+			serum.initializeClaim(_tokenId);
 	}
 
 	/**
