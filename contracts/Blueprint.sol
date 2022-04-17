@@ -83,8 +83,12 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 			uint256 token = labGame.getToken(tokenId);
 			// Only Gen3 scientists are claimed
 			if (token & 0xFF == 3) {
-				amount += (block.timestamp - tokenClaims[tokenId]) / CLAIM_PERIOD;
-				tokenClaims[tokenId] = block.timestamp;
+				// Reuse token to store current claim
+				token = (block.timestamp - tokenClaims[tokenId]) / CLAIM_PERIOD;
+				if (token != 0) {
+					amount += token;
+					tokenClaims[tokenId] = block.timestamp;
+				}
 			}
 		}
 		// Include pending
