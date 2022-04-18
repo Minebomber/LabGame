@@ -6,6 +6,7 @@ const {
 	deployContract,
 	deployProxy,
 	impersonateAccount,
+	increaseTime,
 } = require('./util');
 
 describe('Serum', function () {
@@ -66,17 +67,79 @@ describe('Serum', function () {
 
 	describe('claim', function () {
 		it('no owned revert', async function () {
-			await expect(
-				this.serum.claim()
-			).to.be.revertedWith('NoClaimAvailable');
+			await expect(this.serum.claim()).to.be.revertedWith('NoClaimAvailable');
+		});
+
+		it('1 token, just mint = 0.01 SERUM (1 sec)', async function () {
+			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+			await expect(() => this.serum.claim()).to.changeTokenBalance(this.serum, this.owner, '11574074074074074');
+		});
+
+		it('1 token, 1 day = 1000 SERUM minted', async function () {
+			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+			await increaseTime(86400);
+			await expect(() => this.serum.claim()).to.changeTokenBalance(this.serum, this.owner, ethers.utils.parseEther('1000'));
+		});
+
+		it('1 token, 2 days = 2000 SERUM minted', async function () {
+			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+			await increaseTime(172800);
+			await expect(() => this.serum.claim()).to.changeTokenBalance(this.serum, this.owner, ethers.utils.parseEther('2000'));
+		});
+
+		it('2 tokens, 1 day = 2000 SERUM minted', async function () {
+			await this.labGame.mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+			await increaseTime(86400);
+			await expect(() => this.serum.claim()).to.changeTokenBalance(this.serum, this.owner, ethers.utils.parseEther('2000'));
 		});
 	});
 
 	describe('pendingClaim', function () {
 		it('no owned zero', async function () {
-			expect(
-				await this.serum.pendingClaim(this.other.address)
-			).to.equal(0);
+			expect(await this.serum.pendingClaim(this.owner.address)).to.equal(0);
+		});
+
+		it('just mint zero', async function () {
+			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+			await this.serum.addController(this.other.address);
+			expect(await this.serum.pendingClaim(this.owner.address)).to.equal('11574074074074074');
+		});
+
+		it('1 token, 1 day = 1000 SERUM', async function () {
+			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+			await increaseTime(86400);
+			await this.serum.addController(this.other.address);
+			expect(await this.serum.pendingClaim(this.owner.address)).to.equal(ethers.utils.parseEther('1000'));
+		});
+		
+		it('1 token, 2 days = 2000 SERUM', async function () {
+			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+			await increaseTime(172800);
+			await this.serum.addController(this.other.address);
+			expect(await this.serum.pendingClaim(this.owner.address)).to.equal(ethers.utils.parseEther('2000'));
+		});
+		
+		it('2 tokens, 1 day = 2000 SERUM', async function () {
+			await this.labGame.mint(2, [], { value: ethers.utils.parseEther('0.12') });
+			await this.vrf.fulfillRequests();
+			await this.labGame.reveal();
+			await increaseTime(86400);
+			await this.serum.addController(this.other.address);
+			expect(await this.serum.pendingClaim(this.owner.address)).to.equal(ethers.utils.parseEther('2000'));
 		});
 	});
 
