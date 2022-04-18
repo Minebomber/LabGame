@@ -83,6 +83,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		serum = ISerum(_serum);
 		metadata = IMetadata(_metadata);
 
+		// Setup rarity and alias tables for token traits
 		rarities[0] = [255, 255, 255, 255, 255, 255, 255, 255];
 		aliases[0] = [0, 0, 0, 0, 0, 0, 0, 0];
 
