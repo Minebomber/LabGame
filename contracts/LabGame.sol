@@ -292,13 +292,13 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		else if (_tokenId <= GEN1_MAX) token = 1;
 		else if (_tokenId <= GEN2_MAX) token = 2;
 		else if (_tokenId <= GEN3_MAX) token = 3;
-		// Select traits with given seed
+		// Select scientist or mutant
 		token |= (((_seed & 0xFFFF) % 10) == 0) ? 128 : 0;
 		// Loop over tokens traits (9 scientist, 8 mutant)
 		(uint256 start, uint256 count) = (token & 128 != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		for (uint256 i; i < count; i++) {
 			_seed >>= 16;
-			token |= _selectTrait(_seed & 0xFFFF, start + i) << (8 * i + 8);
+			token |= _selectTrait(_seed, start + i) << (8 * i + 8);
 		}
 		// Save traits
 		tokens[_tokenId] = token;
