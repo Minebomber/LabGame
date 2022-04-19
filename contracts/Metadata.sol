@@ -118,7 +118,7 @@ contract Metadata is OwnableUpgradeable {
 		}
 		return abi.encodePacked(
 			'[', attributes,
-			'{"trait_type":"Generation", "value":"', uint256(_token & 3).toString(), '"},',
+			'{"trait_type":"Generation", "value":"', (_token & 3).toString(), '"},',
 			'{"trait_type":"Type","value":"', (_token & 128 != 0) ? TYPE1_NAME : TYPE0_NAME, '"}]'
 		);
 	}
