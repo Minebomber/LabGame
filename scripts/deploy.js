@@ -3,7 +3,7 @@ const TRAITS = require('./traits.json');
 
 async function deployContract(name, ...args) {
 	const factory = await ethers.getContractFactory(name);
-	const contract = await upgrades.deployProxy(factory, [...args]);
+	const contract = await factory.deploy(...args);
 	await contract.deployed();
 	console.log(`${name} deployed to ${contract.address}`);
 	return contract;
