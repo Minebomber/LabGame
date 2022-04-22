@@ -50,6 +50,6 @@ contract TestVRFCoordinatorV2  {
 			blockhash(block.number - 1),
 			block.timestamp,
 			seed
-		))) << 16) | 0;
+		))) << 16) | 1;
 	}
 }

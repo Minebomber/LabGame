@@ -63,7 +63,7 @@ describe('LabGame', function () {
 
 	describe('whitelistMint', function () {
 		it('paused revert', async function () {
-			await this.labGame.connect(this.accounts[0]).setPaused(true);
+			await this.labGame.connect(this.accounts[0]).pause();
 			await expect(
 				this.labGame.connect(this.accounts[1]).whitelistMint(1, [])
 			).to.be.revertedWith('Pausable_Paused');
@@ -174,7 +174,7 @@ describe('LabGame', function () {
 
 	describe('mint', function () {
 		it('paused revert', async function () {
-			await this.labGame.connect(this.accounts[0]).setPaused(true);
+			await this.labGame.connect(this.accounts[0]).pause();
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(1, [])
 			).to.be.revertedWith('Pausable_Paused');
@@ -480,16 +480,31 @@ describe('LabGame', function () {
 		});
 	});
 
-	describe('setPaused', function () {
+	describe('pause', function () {
 		it('non-owner revert', async function () {
 			await expect(
-				this.labGame.connect(this.accounts[1]).setPaused(true)
+				this.labGame.connect(this.accounts[1]).pause()
 			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('owner success', async function () {
-			await this.labGame.connect(this.accounts[0]).setPaused(true);
+			await this.labGame.connect(this.accounts[0]).pause();
 			expect(await this.labGame.paused()).to.equal(true);
+		});
+	});
+	
+	describe('unpause', function () {
+		it('non-owner revert', async function () {
+			await this.labGame.pause();
+			await expect(
+				this.labGame.connect(this.accounts[1]).unpause()
+			).to.be.revertedWith('Ownable_CallerNotOwner');
+		});
+
+		it('owner success', async function () {
+			await this.labGame.pause();
+			await this.labGame.connect(this.accounts[0]).unpause();
+			expect(await this.labGame.paused()).to.equal(false);
 		});
 	});
 

@@ -95,11 +95,16 @@ contract Laboratory is ERC721EnumerableUpgradeable, OwnableUpgradeable, Pausable
 	// -- ADMIN --
 
 	/**
-	 * Set paused state
-	 * @param _state pause state
+	 * Pause the contract
 	 */
-	function setPaused(bool _state) external onlyOwner {
-		if (_state)	_pause();
-		else        _unpause();
+	function pause() external onlyOwner {
+		_pause();
+	}
+	
+	/**
+	 * Unpause the contract
+	 */
+	function unpause() external onlyOwner {
+		_unpause();
 	}
 }

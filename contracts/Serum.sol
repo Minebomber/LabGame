@@ -255,11 +255,16 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 	}
 
 	/**
-	 * Set paused state
-	 * @param _state pause state
+	 * Pause the contract
 	 */
-	function setPaused(bool _state) external onlyRole(DEFAULT_ADMIN_ROLE) {
-		if (_state)	_pause();
-		else        _unpause();
+	function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+		_pause();
+	}
+	
+	/**
+	 * Unpause the contract
+	 */
+	function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+		_unpause();
 	}
 }

@@ -132,7 +132,7 @@ describe('Blueprint', function () {
 
 		it('correct pending calculation', async function () {
 			await increaseTime(172801);
-			await this.blueprint.setPaused(true);
+			await this.blueprint.pause();
 			expect(await this.blueprint.pendingClaim(this.accounts[0].address)).to.equal(2);
 		})
 	});
@@ -173,16 +173,31 @@ describe('Blueprint', function () {
 		});
 	});
 
-	describe('setPaused', function () {
+	describe('pause', function () {
 		it('non-owner revert', async function () {
 			await expect(
-				this.blueprint.connect(this.accounts[1]).setPaused(true)
+				this.blueprint.connect(this.accounts[1]).pause()
 			).to.be.revertedWith('Ownable_CallerNotOwner');
 		});
 
 		it('owner success', async function () {
-			await this.blueprint.connect(this.accounts[0]).setPaused(true);
+			await this.blueprint.connect(this.accounts[0]).pause();
 			expect(await this.blueprint.paused()).to.equal(true);
+		});
+	});
+	
+	describe('unpause', function () {
+		it('non-owner revert', async function () {
+			await this.blueprint.pause();
+			await expect(
+				this.blueprint.connect(this.accounts[1]).unpause()
+			).to.be.revertedWith('Ownable_CallerNotOwner');
+		});
+
+		it('owner success', async function () {
+			await this.blueprint.pause();
+			await this.blueprint.connect(this.accounts[0]).unpause();
+			expect(await this.blueprint.paused()).to.equal(false);
 		});
 	});
 

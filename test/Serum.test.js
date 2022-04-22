@@ -207,7 +207,7 @@ describe('Serum', function () {
 
 		it('paused revert', async function () {
 			await this.serum.connect(this.owner).addController(this.other.address);
-			await this.serum.connect(this.owner).setPaused(true);
+			await this.serum.connect(this.owner).pause();
 			await expect(
 				this.serum.connect(this.other).mint(this.other.address, 1000)
 			).to.be.revertedWith('Pausable_Paused');
@@ -232,7 +232,7 @@ describe('Serum', function () {
 		it('paused revert', async function () {
 			await this.serum.connect(this.owner).addController(this.other.address);
 			await this.serum.connect(this.other).mint(this.other.address, 1000);
-			await this.serum.connect(this.owner).setPaused(true);
+			await this.serum.connect(this.owner).pause();
 			await expect(
 				this.serum.connect(this.other).burn(this.other.address, 1000)
 			).to.be.revertedWith('Pausable_Paused');
@@ -283,15 +283,30 @@ describe('Serum', function () {
 		});
 	});
 
-	describe('setPaused', function () {
+	describe('pause', function () {
 		it('non-owner revert', async function () {
 			await expect(
-				this.serum.connect(this.other).setPaused(true)
+				this.serum.connect(this.other).pause()
 			).to.be.revertedWith('AccessControl_MissingRole');
 		});
 
 		it('owner success', async function () {
-			await this.serum.connect(this.owner).setPaused(true);
+			await this.serum.connect(this.owner).pause();
+			expect(await this.serum.paused()).to.equal(true);
+		});
+	});
+	
+	describe('unpause', function () {
+		it('non-owner revert', async function () {
+			await this.serum.connect(this.owner).pause();
+			await expect(
+				this.serum.connect(this.other).unpause()
+			).to.be.revertedWith('AccessControl_MissingRole');
+		});
+
+		it('owner success', async function () {
+			await this.serum.connect(this.owner).pause();
+			await this.serum.connect(this.owner).unpause();
 			expect(await this.serum.paused()).to.equal(true);
 		});
 	});
