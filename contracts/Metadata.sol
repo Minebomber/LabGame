@@ -11,7 +11,7 @@ contract Metadata is OwnableUpgradeable {
 	using StringsUpgradeable for uint256;
 	using Base64Upgradeable for bytes;
 
-	uint256 constant MAX_TRAITS = 17;
+	uint256 constant MAX_TRAITS = 16;
 	uint256 constant TYPE_OFFSET = 9;
 
 	string constant TYPE0_NAME = "Scientist";
@@ -86,22 +86,21 @@ contract Metadata is OwnableUpgradeable {
 	function _attributes(uint256 _token) internal view returns (bytes memory) {
 		string[MAX_TRAITS] memory TRAIT_NAMES = [
 			"Background",
-			"Outline",
+			"Skin",
 			"Pants",
 			"Shirt",
 			"Lab Coat",
 			"Shoes",
 			"Hair",
-			"Eye Accessory",
-			"Mouth Accessory",
+			"Eyes",
+			"Mouth",
 			"Background",
-			"Mutant Color",
-			"Human Type",
-			"Wrist",
-			"Eye",
-			"Shoes",
+			"Body",
 			"Pants",
-			"Arm"
+			"Shoes",
+			"Mutated Body",
+			"Eyes",
+			"Mouth"
 		];
 
 		(uint256 start, uint256 count) = (_token & 128 != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);

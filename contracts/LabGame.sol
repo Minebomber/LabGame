@@ -38,7 +38,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 
 	uint256 constant MINT_LIMIT = 2;
 
-	uint256 constant MAX_TRAITS = 17;
+	uint256 constant MAX_TRAITS = 16;
 	uint256 constant TYPE_OFFSET = 9;
 
 	mapping(uint256 => uint256) tokens;
@@ -93,8 +93,8 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		rarities[2] = [50, 73, 96, 119, 142, 164, 187, 210, 233, 255, 28];
 		aliases[2] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0];
 
-		rarities[3] = [255, 255, 192, 128, 192, 255, 255, 255, 128, 128, 64, 255, 255, 64, 255, 255, 128, 128, 128, 255, 128, 255, 255, 255, 255];
-		aliases[3] = [0, 0, 24, 5, 24, 0, 0, 0, 6, 7, 2, 0, 0, 4, 0, 0, 12, 15, 19, 0, 21, 0, 0, 0, 0];
+		rarities[3] = [128, 255, 255, 192, 128, 192, 255, 255, 255, 64, 255, 255, 64, 255, 255, 128, 128, 128, 255, 128, 255, 128, 255, 255, 255];
+		aliases[3] = [6, 0, 0, 24, 7, 24, 0, 0, 0, 3, 0, 0, 5, 0, 0, 8, 11, 14, 0, 18, 0, 20, 0, 0, 0];
 
 		rarities[4] = [199, 209, 133, 255, 209, 209, 255, 255, 133, 133, 199, 255, 199, 66, 66, 199, 255, 133, 255, 255, 66, 255, 255, 66, 250, 240];
 		aliases[4] = [22, 24, 7, 0, 24, 25, 0, 0, 11, 16, 24, 0, 25, 25, 1, 22, 0, 19, 0, 0, 4, 0, 0, 5, 7, 22];
@@ -111,10 +111,26 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		rarities[8] = [112, 112, 160, 160, 208, 64, 64, 208, 255, 255];
 		aliases[8] = [2, 3, 4, 7, 8, 0, 1, 9, 0, 0];
 
-		for (uint256 i = TYPE_OFFSET; i < MAX_TRAITS; i++) {
-			rarities[i] = [255, 170, 85, 85];
-			aliases[i] = [0, 0, 0, 1];
-		}
+		rarities[9] = [255, 255, 255, 255, 255, 255, 255, 255];
+		aliases[9] = [0, 0, 0, 0, 0, 0, 0, 0];
+
+		rarities[10] = [235, 250, 46, 30, 255, 76];
+		aliases[10] = [4, 4, 1, 0, 0, 4];
+
+		rarities[11] = [153, 204, 255, 102];
+		aliases[11] = [1, 2, 0, 0];
+
+		rarities[12] = [81, 138, 133, 30, 184, 189, 189, 138, 235, 240, 240, 255];
+		aliases[12] = [2, 5, 4, 0, 8, 9, 10, 6, 11, 11, 11, 0];
+
+		rarities[13] = [255, 255, 255, 255, 255, 255, 255, 255];
+		aliases[13] = [0, 0, 0, 0, 0, 0, 0, 0];
+
+		rarities[14] = [76, 192, 255];
+		aliases[14] = [2, 2, 0];
+
+		rarities[15] = [236, 236, 224, 224, 249, 249, 255];
+		aliases[15] = [4, 5, 0, 1, 6, 6, 0];
 	}
 
 	// -- EXTERNAL --
