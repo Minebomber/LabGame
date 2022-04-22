@@ -307,7 +307,7 @@ describe('Serum', function () {
 		it('owner success', async function () {
 			await this.serum.connect(this.owner).pause();
 			await this.serum.connect(this.owner).unpause();
-			expect(await this.serum.paused()).to.equal(true);
+			expect(await this.serum.paused()).to.equal(false);
 		});
 	});
 });
