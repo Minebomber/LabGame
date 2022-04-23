@@ -1,4 +1,3 @@
-const { upgrades } = require("hardhat");
 const TRAITS = require('./traits.json');
 
 async function deployContract(name, ...args) {

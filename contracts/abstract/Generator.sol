@@ -49,7 +49,7 @@ abstract contract Generator is VRFConsumerBaseV2Upgradable {
 		keyHash = _keyHash;
 		subscriptionId = _subscriptionId;
 		callbackGasLimit = _callbackGasLimit;
-		VRF_COORDINATOR.addConsumer(subscriptionId, address(this));
+		//VRF_COORDINATOR.addConsumer(subscriptionId, address(this));
 	}
 
 	modifier zeroPending(address _account) {
