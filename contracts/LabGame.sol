@@ -31,10 +31,10 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	// uint256 constant GEN1_MAX = 10_000;
 	// uint256 constant GEN2_MAX = 12_500;
 	// uint256 constant GEN3_MAX = 15_000;
-	uint256 constant GEN0_MAX = 4;
-	uint256 constant GEN1_MAX = 8;
-	uint256 constant GEN2_MAX = 10;
-	uint256 constant GEN3_MAX = 12;
+	uint256 constant GEN0_MAX = 20;
+	uint256 constant GEN1_MAX = 40;
+	uint256 constant GEN2_MAX = 50;
+	uint256 constant GEN3_MAX = 60;
 
 	uint256 constant MINT_LIMIT = 2;
 
