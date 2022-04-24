@@ -101,16 +101,14 @@ describe('Generator', function () {
 			let pending = await this.generator.getPending(this.accounts[0]);
 			expect(pending.base).to.equal(1);
 			expect(pending.count).to.equal(5);
-			expect(pending.random.length).to.equal(0);
 		});
 		
 		it('fulfill data update', async function() {
 			await this.generator.request(this.accounts[0], 1, 5);
 			await this.vrf.fulfillRequests();
 			let pending = await this.generator.getPending(this.accounts[0]);
-			expect(pending.base).to.equal(1);
-			expect(pending.count).to.equal(5);
-			expect(pending.random.length).to.equal(5);
+			expect(pending.base).to.equal(0);
+			expect(pending.count).to.equal(0);
 		});
 		
 		it('zero account revert', async function() {
@@ -137,49 +135,5 @@ describe('Generator', function () {
 				this.generator.request(this.accounts[0], 1, 5)
 			).to.be.revertedWith('AccountHasPendingMint');
 		});
-	});
-	
-	describe('_reveal', function () {
-		it('clears pending data', async function() {
-			await this.generator.request(this.accounts[0], 1, 5)
-			await this.vrf.fulfillRequests();
-			// Pending set
-			let pending = await this.generator.getPending(this.accounts[0]);
-			expect(pending.base).to.equal(1);
-			expect(pending.count).to.equal(5);
-			expect(pending.random.length).to.equal(5);
-			
-			await this.generator.reveal(this.accounts[0]);
-			// Pending cleared
-			pending = await this.generator.getPending(this.accounts[0]);
-			expect(pending.base).to.equal(0);
-			expect(pending.count).to.equal(0);
-			expect(pending.random.length).to.equal(0);
-		});
-
-		it('emits events', async function() {
-			await this.generator.request(this.accounts[0], 1, 5)
-			await this.vrf.fulfillRequests();
-			await expect(this.generator.reveal(this.accounts[0])).to
-			.emit(this.generator, 'Revealed').withArgs(this.accounts[0], 1).and
-			.emit(this.generator, 'Revealed').withArgs(this.accounts[0], 2).and
-			.emit(this.generator, 'Revealed').withArgs(this.accounts[0], 3).and
-			.emit(this.generator, 'Revealed').withArgs(this.accounts[0], 4).and
-			.emit(this.generator, 'Revealed').withArgs(this.accounts[0], 5);
-		});
-
-		it('no pending revert', async function() {
-			await expect(
-				this.generator.reveal(this.accounts[0])
-			).to.be.revertedWith('AcountHasNoPendingMint');
-		});
-
-		it('not fulfilled revert', async function() {
-			await this.generator.request(this.accounts[0], 1, 5)
-			await expect(
-				this.generator.reveal(this.accounts[0])
-			).to.be.revertedWith('RevealNotReady');
-		});
-
 	});
 });

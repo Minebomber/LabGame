@@ -51,10 +51,8 @@ describe('Blueprint', function () {
 		// Generation 0
 		await this.labGame.connect(this.accounts[0]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 		await this.vrf.fulfillRequests();
-		await this.labGame.connect(this.accounts[0]).reveal();
 		await this.labGame.connect(this.accounts[1]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 		await this.vrf.fulfillRequests();
-		await this.labGame.connect(this.accounts[1]).reveal();
 
 		// Serum for minting
 		await this.serum.addController(this.accounts[0].address);
@@ -64,19 +62,15 @@ describe('Blueprint', function () {
 		// Generation 1
 		await this.labGame.connect(this.accounts[0]).mint(2, [1, 2]);
 		await this.vrf.fulfillRequests();
-		await this.labGame.connect(this.accounts[0]).reveal();
 		await this.labGame.connect(this.accounts[1]).mint(2, [3, 4]);
 		await this.vrf.fulfillRequests();
-		await this.labGame.connect(this.accounts[1]).reveal();
 		// Generation 2
 		await this.labGame.connect(this.accounts[0]).mint(2, [5, 6]);
 		await this.vrf.fulfillRequests();
-		await this.labGame.connect(this.accounts[0]).reveal();
 
 		// Generation 3
 		await this.labGame.connect(this.accounts[0]).mint(2, []);
 		await this.vrf.fulfillRequests();
-		await this.labGame.connect(this.accounts[0]).reveal();
 	});
 
 	beforeEach(async function () {
@@ -116,7 +110,6 @@ describe('Blueprint', function () {
 			await this.blueprint.claim();
 			expect(await this.blueprint.totalMinted()).to.equal(2);
 			await this.vrf.fulfillRequests();
-			await this.blueprint.reveal();
 			expect(await this.blueprint.totalMinted()).to.equal(2);
 		});
 	});
@@ -135,18 +128,6 @@ describe('Blueprint', function () {
 			await this.blueprint.pause();
 			expect(await this.blueprint.pendingClaim(this.accounts[0].address)).to.equal(2);
 		})
-	});
-
-	describe('reveal', function () {
-		it('no pending revert', async function () {
-			await expect(this.blueprint.reveal()).to.be.revertedWith('AcountHasNoPendingMint');
-		});
-
-		it('not ready revert', async function () {
-			await increaseTime(172801);
-			await this.blueprint.claim();
-			await expect(this.blueprint.reveal()).to.be.revertedWith('RevealNotReady');
-		});
 	});
 
 	describe('initializeClaim', function () {

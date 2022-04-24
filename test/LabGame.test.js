@@ -160,7 +160,6 @@ describe('LabGame', function () {
 				{ value: ethers.utils.parseEther('0.12') }
 			);
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[3]).reveal();
 
 			await expect(
 				this.labGame.connect(this.accounts[3]).whitelistMint(
@@ -224,7 +223,6 @@ describe('LabGame', function () {
 		it('account limit revert', async function () {
 			await this.labGame.connect(this.accounts[1]).mint(2, [], { value: ethers.utils.parseEther('0.12') })
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[1]).reveal();
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(2, [], { value: ethers.utils.parseEther('0.12') })
 			).to.be.revertedWith('LimitExceeded');
@@ -238,22 +236,18 @@ describe('LabGame', function () {
 				{ value: ethers.utils.parseEther('0.12') }
 			);
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[3]).reveal();
 			expect(await this.labGame.balanceOf(this.accounts[3].address)).to.equal(2);
 			await this.labGame.disableWhitelist();
 			await this.labGame.connect(this.accounts[3]).mint(2, [], { value: ethers.utils.parseEther('0.12') })
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[3]).reveal();
 			expect(await this.labGame.balanceOf(this.accounts[3].address)).to.equal(4);
 		});
 
 		it('generation limit revert', async function () {
 			await this.labGame.connect(this.accounts[2]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[2]).reveal();
 			await this.labGame.connect(this.accounts[3]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[3]).reveal();
 
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(2, [], { value: ethers.utils.parseEther('0.12') })
@@ -263,10 +257,8 @@ describe('LabGame', function () {
 		it('not enough serum revert', async function () {
 			await this.labGame.connect(this.accounts[2]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[2]).reveal();
 			await this.labGame.connect(this.accounts[3]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[3]).reveal();
 
 			await expect(
 				this.labGame.connect(this.accounts[1]).mint(2, [], [])
@@ -276,10 +268,8 @@ describe('LabGame', function () {
 		it('no burnIds revert', async function () {
 			await this.labGame.connect(this.accounts[2]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[2]).reveal();
 			await this.labGame.connect(this.accounts[3]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[3]).reveal();
 			await this.serum.connect(this.accounts[0]).addController(this.accounts[0].address);
 			await this.serum.connect(this.accounts[0]).mint(this.accounts[1].address, ethers.utils.parseEther('2000'));
 
@@ -291,10 +281,8 @@ describe('LabGame', function () {
 		it('nonexistent burnIds revert', async function () {
 			await this.labGame.connect(this.accounts[2]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[2]).reveal();
 			await this.labGame.connect(this.accounts[3]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[3]).reveal();
 			await this.serum.connect(this.accounts[0]).addController(this.accounts[0].address);
 			await this.serum.connect(this.accounts[0]).mint(this.accounts[1].address, ethers.utils.parseEther('2000'));
 
@@ -306,10 +294,8 @@ describe('LabGame', function () {
 		it('not owned burnIds revert', async function () {
 			await this.labGame.connect(this.accounts[2]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[2]).reveal();
 			await this.labGame.connect(this.accounts[3]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[3]).reveal();
 			await this.serum.connect(this.accounts[0]).addController(this.accounts[0].address);
 			await this.serum.connect(this.accounts[0]).mint(this.accounts[0].address, ethers.utils.parseEther('2000'));
 
@@ -321,13 +307,10 @@ describe('LabGame', function () {
 		it('duplicate burnIds revert', async function () {
 			await this.labGame.connect(this.accounts[1]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[1]).reveal();
 			await this.labGame.connect(this.accounts[2]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[2]).reveal();
 			await this.labGame.connect(this.accounts[3]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[3]).reveal();
 			await this.serum.connect(this.accounts[0]).addController(this.accounts[0].address);
 			await this.serum.connect(this.accounts[0]).mint(this.accounts[1].address, ethers.utils.parseEther('4000'));
 
@@ -339,13 +322,10 @@ describe('LabGame', function () {
 		it('too many burnIds revert', async function () {
 			await this.labGame.connect(this.accounts[1]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[1]).reveal();
 			await this.labGame.connect(this.accounts[2]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[2]).reveal();
 			await this.labGame.connect(this.accounts[3]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[3]).reveal();
 			await this.serum.connect(this.accounts[0]).addController(this.accounts[0].address);
 			await this.serum.connect(this.accounts[0]).mint(this.accounts[1].address, ethers.utils.parseEther('2000'));
 
@@ -357,13 +337,10 @@ describe('LabGame', function () {
 		it('correct burnId success', async function () {
 			await this.labGame.connect(this.accounts[1]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[1]).reveal();
 			await this.labGame.connect(this.accounts[2]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[2]).reveal();
 			await this.labGame.connect(this.accounts[3]).mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[3]).reveal();
 			await this.serum.connect(this.accounts[0]).addController(this.accounts[0].address);
 			await this.serum.connect(this.accounts[0]).mint(this.accounts[1].address, ethers.utils.parseEther('2000'));
 
@@ -374,42 +351,10 @@ describe('LabGame', function () {
 
 	});
 
-	describe('reveal', function () {
-		it('non-receiver revert', async function () {
-			await this.labGame.connect(this.accounts[0]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
-			await this.vrf.fulfillRequests();
-			await expect(
-				this.labGame.connect(this.accounts[1]).reveal()
-			).to.be.revertedWith('AcountHasNoPendingMint');
-		});
-
-		it('not ready revert', async function() {
-			await this.labGame.connect(this.accounts[0]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
-			await expect(
-				this.labGame.connect(this.accounts[0]).reveal()
-			).to.be.revertedWith('RevealNotReady');
-		});
-
-		it('receiver success', async function () {
-			expect(await this.labGame.totalMinted()).to.equal(0);
-			await this.labGame.connect(this.accounts[1]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
-			expect(await this.labGame.totalMinted()).to.equal(1);
-			await this.vrf.fulfillRequests();
-			await expect(
-				this.labGame.connect(this.accounts[1]).reveal()
-			).to.emit(this.labGame, 'Revealed');
-			expect(
-				await this.labGame.tokenOfOwnerByIndex(this.accounts[1].address, 0)
-			).to.equal(1);
-			expect(await this.labGame.totalMinted()).to.equal(1);
-		});
-	});
-	
 	describe('transferFrom', function () {
 		it('updates serum claim', async function () {
 			await this.labGame.connect(this.accounts[1]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[1]).reveal();
 			expect(await this.labGame.ownerOf(1)).to.equal(this.accounts[1].address);
 			await expect(
 				this.labGame.connect(this.accounts[1]).transferFrom(this.accounts[1].address, this.accounts[0].address, 1)
@@ -422,7 +367,6 @@ describe('LabGame', function () {
 		it('updates serum claim', async function () {
 			await this.labGame.connect(this.accounts[1]).mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.connect(this.accounts[1]).reveal();
 			expect(await this.labGame.ownerOf(1)).to.equal(this.accounts[1].address);
 			await expect(
 				this.labGame.connect(this.accounts[1]).transferFrom(this.accounts[1].address, this.accounts[0].address, 1)

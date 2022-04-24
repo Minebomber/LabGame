@@ -73,7 +73,6 @@ describe('Serum', function () {
 		it('1 token, just mint = 0.01 SERUM (1 sec)', async function () {
 			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 			await this.serum.claim();
 			expect(await this.serum.balanceOf(this.owner.address)).to.be.closeTo('0', '11574074074074074');
 		});
@@ -81,7 +80,6 @@ describe('Serum', function () {
 		it('1 token, 1 day = 1000 SERUM minted', async function () {
 			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 			await increaseTime(86400);
 			await this.serum.claim();
 			expect(await this.serum.balanceOf(this.owner.address)).to.be.closeTo(ethers.utils.parseEther('1000'), '11574074074074074');
@@ -90,7 +88,6 @@ describe('Serum', function () {
 		it('1 token, 2 days = 2000 SERUM minted', async function () {
 			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 			await increaseTime(172800);
 			await this.serum.claim();
 			expect(await this.serum.balanceOf(this.owner.address)).to.be.closeTo(ethers.utils.parseEther('2000'), '11574074074074074');
@@ -99,7 +96,6 @@ describe('Serum', function () {
 		it('2 tokens, 1 day = 2000 SERUM minted', async function () {
 			await this.labGame.mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 			await increaseTime(86400);
 			await this.serum.claim();
 			expect(await this.serum.balanceOf(this.owner.address)).to.be.closeTo(ethers.utils.parseEther('2000'), '23148148148148148');
@@ -114,7 +110,6 @@ describe('Serum', function () {
 		it('just mint zero', async function () {
 			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 			await this.serum.addController(this.other.address);
 			expect(await this.serum.pendingClaim(this.owner.address)).to.be.closeTo('0', '11574074074074074');
 		});
@@ -122,7 +117,6 @@ describe('Serum', function () {
 		it('1 token, 1 day = 1000 SERUM', async function () {
 			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 			await increaseTime(86400);
 			await this.serum.addController(this.other.address);
 			expect(await this.serum.pendingClaim(this.owner.address)).to.be.closeTo(ethers.utils.parseEther('1000'), '11574074074074074');
@@ -131,7 +125,6 @@ describe('Serum', function () {
 		it('1 token, 2 days = 2000 SERUM', async function () {
 			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 			await increaseTime(172800);
 			await this.serum.addController(this.other.address);
 			expect(await this.serum.pendingClaim(this.owner.address)).to.be.closeTo(ethers.utils.parseEther('2000'), '11574074074074074');
@@ -140,7 +133,6 @@ describe('Serum', function () {
 		it('2 tokens, 1 day = 2000 SERUM', async function () {
 			await this.labGame.mint(2, [], { value: ethers.utils.parseEther('0.12') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 			await increaseTime(86400);
 			await this.serum.addController(this.other.address);
 			expect(await this.serum.pendingClaim(this.owner.address)).to.be.closeTo(ethers.utils.parseEther('2000'), '23148148148148148');
@@ -151,7 +143,6 @@ describe('Serum', function () {
 		it('non-LabGame revert', async function () {
 			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 
 			await expect(
 				this.serum.initializeClaim(0)
@@ -161,7 +152,6 @@ describe('Serum', function () {
 		it('LabGame success', async function () {
 			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 
 			await impersonateAccount(this.labGame.address);
 			await this.serum.connect(await ethers.getSigner(this.labGame.address)).initializeClaim(1);
@@ -173,7 +163,6 @@ describe('Serum', function () {
 		it('non-LabGame revert', async function () {
 			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 
 			await expect(
 				this.serum.initializeClaim(0)
@@ -183,7 +172,6 @@ describe('Serum', function () {
 		it('LabGame success', async function () {
 			await this.labGame.mint(1, [], { value: ethers.utils.parseEther('0.06') });
 			await this.vrf.fulfillRequests();
-			await this.labGame.reveal();
 
 			await impersonateAccount(this.labGame.address);
 			await this.serum.connect(await ethers.getSigner(this.labGame.address)).updateClaim(this.owner.address, 1);

@@ -42,6 +42,14 @@ contract TestGenerator is Generator {
 		_setCallbackGasLimit(_callbackGasLimit);
 	}
 
+	function getPending(address _account) public view returns (Mint memory) {
+		return pendingMints[_account];
+	}
+
+	function getRequest(uint256 _requestId) public view returns (address) {
+		return mintRequests[_requestId];
+	}
+
 	function request(address _account, uint256 _base, uint256 _count) public {
 		_request(_account, _base, _count);
 	}

@@ -209,6 +209,11 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 
 	// -- INTERNAL --
 
+	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
+		Generator.fulfillRandomWords(_requestId, _randomWords);
+		tokenOffset -= _randomWords.length;
+	}
+
 	/**
 	 * Generate and mint pending token using random seed
 	 * @param _tokenId Token ID to reveal
