@@ -67,7 +67,7 @@ async function main() {
 	await Metadata.setLabGame(LabGame.address);
 	await LabGame.setBlueprint(Blueprint.address);
 	// Whitelist for accounts 0-9 + ... => 2500 acct whitelist
-	await LabGame.enableWhitelist('0x22099accb4aa541c33cead242b5a46a3bf490fb6dfb40044df5627db978e59af');
+	await LabGame.enableWhitelist('0x809ba8467050067e579fdc6b0941d545ae747a6de9baa32f4b7d48bf92887de5');
 	await Blueprint.setLaboratory(Laboratory.address);
 	// Traits upload
 	for (let i = 0; i < 16; i++) {

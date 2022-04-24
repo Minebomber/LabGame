@@ -72,7 +72,7 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 	/**
 	 * Claim scientist rewards and request blueprint mint
 	 */
-	function claim() external override zeroPending(_msgSender()) {
+	function claim() external override {
 		uint256 minted = totalMinted();
 		if (minted >= MAX_MINTED) revert MintLimit();
 		// Calculate earned blueprints
@@ -125,17 +125,6 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 		uint256 minted = totalMinted();
 		if (MAX_MINTED - minted < amount)
 			amount = MAX_MINTED - minted;
-	}
-
-	/**
-	 * Reveal pending blueprint mints
-	 */
-	function reveal() external {
-		// Save count
-		(, uint256 count) = pendingOf(_msgSender());
-		_reveal(_msgSender());
-		// Tokens minted, update offset
-		tokenOffset -= count;
 	}
 
 	function build(uint256 _tokenId) external {
@@ -225,13 +214,13 @@ contract Blueprint is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableU
 	 * @param _tokenId Token ID to reveal
 	 * @param _seed Random seed
 	 */
-	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
+	function _revealToken(address _account, uint256 _tokenId, uint256 _seed) internal override {
 		// 60% Common, 30% Uncommon, 9% Rare, 1% Legendary
 		uint8[4] memory rarities = [204, 255, 92, 10];
 		uint8[4] memory aliases = [1, 0, 0, 0];
 		uint256 i = (_seed & 0xFF) % 4;
 		tokens[_tokenId] = (((_seed >> 8) & 0xFF) < rarities[i]) ? i : aliases[i];
-		_safeMint(_msgSender(), _tokenId);
+		_safeMint(_account, _tokenId);
 	}
 
 	// -- ADMIN --

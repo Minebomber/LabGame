@@ -222,16 +222,6 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	}
 
 	/**
-	 * Reveal pending mints
-	 */
-	function reveal() external whenNotPaused {
-		(, uint256 count) = pendingOf(_msgSender());
-		_reveal(_msgSender());
-		// Tokens minted, update offset
-		tokenOffset -= count;
-	}
-
-	/**
 	 * Get the metadata uri for a token
 	 * @param _tokenId Token ID to query
 	 * @return Token metadata json URI
@@ -296,12 +286,18 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 
 	// -- INTERNAL --
 
+	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
+		Generator.fulfillRandomWords(_requestId, _randomWords);
+		tokenOffset -= _randomWords.length;
+	}
+
 	/**
 	 * Generate and mint pending token using random seed
+	 * @param _account Address receiving token
 	 * @param _tokenId Token ID to reveal
 	 * @param _seed Random seed
 	 */
-	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
+	function _revealToken(address _account, uint256 _tokenId, uint256 _seed) internal override {
 		// Calculate generation of token
 		uint256 token;
 		if (_tokenId <= GEN0_MAX) {}
@@ -319,7 +315,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		// Save traits
 		tokens[_tokenId] = token;
 		// Mint
-		_safeMint(_msgSender(), _tokenId);
+		_safeMint(_account, _tokenId);
 		// Setup serum/blueprint claim for the token
 		if (token & 0xFF == 3)
 			blueprint.initializeClaim(_tokenId);

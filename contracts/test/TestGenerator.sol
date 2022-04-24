@@ -15,7 +15,7 @@ contract TestGenerator is Generator {
 	}
 
 	function getVrfCoordinator() public view returns (address) {
-		return address(VRF_COORDINATOR);
+		return address(vrfCoordinator);
 	}
 
 	function getKeyHash() public view returns (bytes32) {
@@ -28,14 +28,6 @@ contract TestGenerator is Generator {
 
 	function getCallbackGasLimit() public view returns (uint32) {
 		return callbackGasLimit;
-	}
-
-	function getRequest(uint256 _key) public view returns (address) {
-		return mintRequests[_key];
-	}
-
-	function getPending(address _key) public view returns (Mint memory) {
-		return pendingMints[_key];
 	}
 
 	function setKeyHash(bytes32 _keyHash) public {
@@ -53,10 +45,6 @@ contract TestGenerator is Generator {
 	function request(address _account, uint256 _base, uint256 _count) public {
 		_request(_account, _base, _count);
 	}
-
-	function reveal(address _account) public {
-		_reveal(_account);
-	}
 	
-	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {}
+	function _revealToken(address _account, uint256 _tokenId, uint256 _seed) internal override {}
 }
