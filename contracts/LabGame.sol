@@ -20,6 +20,7 @@ error NotEnoughEther(uint256 _given, uint256 _expected);
 error InvalidBurnLength(uint256 _given, uint256 _expected);
 error BurnNotOwned(address _sender, uint256 _tokenId);
 error InvalidBurnGeneration(uint256 _given, uint256 _expected);
+error BlueprintNotReady();
 
 contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, Generator, Whitelist {
 	uint256 constant GEN0_PRICE = 0.06 ether;
@@ -194,6 +195,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 
 		// Generation 3
 		} else if (id < GEN3_MAX) {
+			if (address(blueprint) == address(0)) revert BlueprintNotReady();
 			if (max > GEN3_MAX) revert GenerationLimit(3);
 			serum.burn(_msgSender(), _amount * GEN3_PRICE);
 			generation = 3;

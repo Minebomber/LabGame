@@ -18,6 +18,7 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 	uint256 constant GEN0_RATE = 1000 ether;
 	uint256 constant GEN1_RATE = 1200 ether;
 	uint256 constant GEN2_RATE = 1500 ether;
+	uint256 constant GEN3_RATE = 2000 ether;
 
 	uint256 constant GEN0_TAX = 100; // 10.0%
 	uint256 constant GEN1_TAX = 125; // 12.5%
@@ -62,10 +63,7 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
 			uint256 token = labGame.getToken(tokenId);
-			// Claim only Gen 0-2 scientists
-			if (token & 0xFF < 3) {
-				amount += _claimScientist(tokenId, token & 3);
-			}
+			amount += _claimScientist(tokenId, token & 3);
 		}
 		// Pay mutant tax
 		amount = _payTax(amount);
@@ -98,10 +96,10 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 			uint256 token = labGame.getToken(tokenId);
 			if (token & 128 != 0)
 				amount += mutantEarnings[token & 3] - tokenClaims[tokenId];
-			else if (token & 0xFF < 3)
+			else
 				untaxed +=
 					(block.timestamp - tokenClaims[tokenId]) * 
-					[ GEN0_RATE, GEN1_RATE, GEN2_RATE, 0 ][token & 3] / 
+					[ GEN0_RATE, GEN1_RATE, GEN2_RATE, GEN3_RATE ][token & 3] / 
 					CLAIM_PERIOD;
 		}
 		amount += _pendingTax(untaxed);
@@ -125,7 +123,7 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 		if (token & 128 != 0) {
 			tokenClaims[_tokenId] = mutantEarnings[token & 3];
 			mutantCounts[token & 3]++;
-		} else if (token & 0xFF < 3) {
+		} else {
 			tokenClaims[_tokenId] = block.timestamp;
 		}
 	}
@@ -143,7 +141,7 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 		uint256 token = labGame.getToken(_tokenId);
 		if ((token & 128) != 0) {
 			amount = _claimMutant(_tokenId, token & 3);
-		} else if (token & 0xFF < 3) {
+		} else {
 			amount = _claimScientist(_tokenId, token & 3);
 			amount = _payTax(amount);
 		}
@@ -161,7 +159,7 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 	 * @return amount Amount of serum/blueprints for this token
 	 */
 	function _claimScientist(uint256 _tokenId, uint256 _generation) internal returns (uint256 amount) {
-		amount = (block.timestamp - tokenClaims[_tokenId]) * [ GEN0_RATE, GEN1_RATE, GEN2_RATE ][_generation] / CLAIM_PERIOD;
+		amount = (block.timestamp - tokenClaims[_tokenId]) * [ GEN0_RATE, GEN1_RATE, GEN2_RATE, GEN3_RATE ][_generation] / CLAIM_PERIOD;
 		tokenClaims[_tokenId] = block.timestamp;
 	}
 	
