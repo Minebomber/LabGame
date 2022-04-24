@@ -27,14 +27,14 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	uint256 constant GEN2_PRICE = 10_000 ether;
 	uint256 constant GEN3_PRICE = 50_000 ether;
 	
-	// uint256 constant GEN0_MAX =  5_000;
-	// uint256 constant GEN1_MAX = 10_000;
-	// uint256 constant GEN2_MAX = 12_500;
-	// uint256 constant GEN3_MAX = 15_000;
+	//uint256 constant GEN0_MAX =  5_000;
+	//uint256 constant GEN1_MAX = 10_000;
+	//uint256 constant GEN2_MAX = 15_000;
+	//uint256 constant GEN3_MAX = 20_000;
 	uint256 constant GEN0_MAX = 4;
 	uint256 constant GEN1_MAX = 8;
-	uint256 constant GEN2_MAX = 10;
-	uint256 constant GEN3_MAX = 12;
+	uint256 constant GEN2_MAX = 12;
+	uint256 constant GEN3_MAX = 16;
 
 	uint256 constant MINT_LIMIT = 2;
 
@@ -196,11 +196,12 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		} else if (id < GEN3_MAX) {
 			if (max > GEN3_MAX) revert GenerationLimit(3);
 			serum.burn(_msgSender(), _amount * GEN3_PRICE);
+			generation = 3;
 		}
 
-		// Burn tokens to mint gen 1 and 2
+		// Burn tokens to mint gen 1, 2, and 3
 		uint256 burnLength = _burnIds.length;
-		if (generation == 1 || generation == 2) {
+		if (generation != 0) {
 			if (burnLength != _amount) revert InvalidBurnLength(burnLength, _amount);
 			for (uint256 i; i < burnLength; i++) {
 				// Verify token to be burned
@@ -211,7 +212,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 			// Add burned tokens to id offset
 			tokenOffset += burnLength;
 
-		// Generation 0 & 3 no burn needed
+		// Generation 0 no burn needed
 		} else {
 			if (burnLength != 0) revert InvalidBurnLength(burnLength, 0);
 		}
@@ -256,12 +257,8 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _tokenId ID of token being transferred
 	 */
 	function transferFrom(address _from, address _to, uint256 _tokenId) public override (ERC721Upgradeable, IERC721Upgradeable)  {
-		// Update blueprint claim for gen3 scientists
-		if (tokens[_tokenId] & 0xFF == 3)
-			blueprint.updateClaim(_from, _tokenId);
-		// Other tokens update serum claim
-		else
-			serum.updateClaim(_from, _tokenId);
+		// Update serum claim
+		serum.updateClaim(_from, _tokenId);
 		// Perform transfer
 		ERC721Upgradeable.transferFrom(_from, _to, _tokenId);
 	}
@@ -274,21 +271,22 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _data Transfer data
 	 */
 	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) public override (ERC721Upgradeable, IERC721Upgradeable) {
-		// Update blueprint claim for gen3 scientists
-		if (tokens[_tokenId] & 0xFF == 3)
-			blueprint.updateClaim(_from, _tokenId);
-		// Other tokens update serum claim
-		else
-			serum.updateClaim(_from, _tokenId);
+		// Update serum claim
+		serum.updateClaim(_from, _tokenId);
 		// Perform transfer
 		ERC721Upgradeable.safeTransferFrom(_from, _to, _tokenId, _data);
 	}
 
 	// -- INTERNAL --
 
+	/**
+	 * Override random fulfillment to generate and update tokenOffset
+	 * @param _requestId Request ID that was fulfilled
+	 * @param _randomWords Received random numbers
+	 */
 	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
-		Generator.fulfillRandomWords(_requestId, _randomWords);
 		tokenOffset -= _randomWords.length;
+		Generator.fulfillRandomWords(_requestId, _randomWords);
 	}
 
 	/**
@@ -314,13 +312,13 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		}
 		// Save traits
 		tokens[_tokenId] = token;
-		// Mint
+		// Mint token
 		_safeMint(_account, _tokenId);
-		// Setup serum/blueprint claim for the token
+		// Setup serum claim for token
+		serum.initializeClaim(_tokenId);
+		// Mint blueprint to gen3 scientists
 		if (token & 0xFF == 3)
-			blueprint.initializeClaim(_tokenId);
-		else
-			serum.initializeClaim(_tokenId);
+			blueprint.mint(_account, _seed >> 16);
 	}
 
 	/**

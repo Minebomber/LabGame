@@ -49,11 +49,7 @@ async function main() {
 		'Blueprint',
 		'BLUEPRINT',
 		Serum.address,
-		LabGame.address,
-		TestVRFCoordinator.address,
-		KEY_HASH,
-		SUBSCRIPTION_ID,
-		CALLBACK_GAS_LIMIT
+		LabGame.address
 	);
 	const Laboratory = await deployProxy(
 		'Laboratory',

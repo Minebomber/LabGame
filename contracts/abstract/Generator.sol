@@ -10,7 +10,6 @@ error AcountHasNoPendingMint(address _account);
 error InvalidAccount();
 error InvalidRequestBase();
 error InvalidRequestCount();
-error RevealNotReady();
 
 abstract contract Generator is VRFConsumerBaseV2Upgradable {
 	VRFCoordinatorV2Interface internal vrfCoordinator;

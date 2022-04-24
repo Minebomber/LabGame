@@ -22,10 +22,10 @@ async function main() {
 	const VRF_COORDINATOR = '0x6168499c0cFfCaCD319c818142124B7A15E857ab';
 	const KEY_HASH = '0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc';
 	const SUBSCRIPTION_ID = 3265;
-	const CALLBACK_GAS_LIMIT = 150_000;
+	const CALLBACK_GAS_LIMIT = 500_000;
 
 	const WHITELIST_ROOT = '0x809ba8467050067e579fdc6b0941d545ae747a6de9baa32f4b7d48bf92887de5';
-	/*
+
 	const Serum = await deployProxy(
 		'Serum',
 		'Serum',
@@ -33,13 +33,13 @@ async function main() {
 	);
 	const Metadata = await deployProxy(
 		'Metadata'
-	); */
-
+	);
+	/*
 	const SERUM_ADDRESS = '0xE905623822A77137dfcAc06234E736Fe6f96452C';
 	const Serum = (await ethers.getContractFactory('Serum')).attach(SERUM_ADDRESS);
 	const METADATA_ADDRESS = '0x866cC1d5c386991f1AD0D0E31f17B1041de26b99';
 	const Metadata = (await ethers.getContractFactory('Metadata')).attach(METADATA_ADDRESS);
-
+	*/
 	const LabGame = await deployProxy(
 		'LabGame',
 		'LabGame',
