@@ -1,14 +1,6 @@
 const { ethers } = require('hardhat');
 const TRAITS = require('./traits.json');
 
-async function deployContract(name, ...args) {
-	const factory = await ethers.getContractFactory(name);
-	const contract = await factory.deploy(...args);
-	await contract.deployed();
-	console.log(`${name} deployed to ${contract.address}`);
-	return contract;
-}
-
 async function deployProxy(name, ...args) {
 	const factory = await ethers.getContractFactory(name);
 	const contract = await upgrades.deployProxy(factory, [...args]);
@@ -34,12 +26,7 @@ async function main() {
 	const Metadata = await deployProxy(
 		'Metadata'
 	);
-	/*
-	const SERUM_ADDRESS = '0xE905623822A77137dfcAc06234E736Fe6f96452C';
-	const Serum = (await ethers.getContractFactory('Serum')).attach(SERUM_ADDRESS);
-	const METADATA_ADDRESS = '0x866cC1d5c386991f1AD0D0E31f17B1041de26b99';
-	const Metadata = (await ethers.getContractFactory('Metadata')).attach(METADATA_ADDRESS);
-	*/
+
 	const LabGame = await deployProxy(
 		'LabGame',
 		'LabGame',
