@@ -97,10 +97,10 @@ contract Metadata is OwnableUpgradeable {
 			"Background",
 			"Body",
 			"Pants",
-			"Shoes",
 			"Mutated Body",
 			"Eyes",
-			"Mouth"
+			"Mouth",
+			"Shoes"
 		];
 
 		(uint256 start, uint256 count) = (_token & 128 != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
