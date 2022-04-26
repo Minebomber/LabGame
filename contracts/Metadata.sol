@@ -16,7 +16,7 @@ contract Metadata is OwnableUpgradeable {
 
 	string constant TYPE0_NAME = "Scientist";
 	string constant TYPE1_NAME = "Mutant";
-	string constant DESCRIPTION = "This is not a rugpull.";
+	string constant DESCRIPTION = "All the metadata and images are generated and stored 100% on-chain. No IPFS. NO API. Just the Ethereum blockchain.";
 	string constant IMAGE_WIDTH = "50";
 	string constant IMAGE_HEIGHT = "50";
 
