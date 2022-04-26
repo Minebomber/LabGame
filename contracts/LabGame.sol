@@ -24,9 +24,9 @@ error BlueprintNotReady();
 
 contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, Generator, Whitelist {
 	uint256 constant GEN0_PRICE = 0.06 ether;
-	uint256 constant GEN1_PRICE = 2_000 ether;
-	uint256 constant GEN2_PRICE = 10_000 ether;
-	uint256 constant GEN3_PRICE = 50_000 ether;
+	uint256 constant GEN1_PRICE = 5_000 ether;
+	uint256 constant GEN2_PRICE = 12_500 ether;
+	uint256 constant GEN3_PRICE = 45_000 ether;
 	
 	//uint256 constant GEN0_MAX =  5_000;
 	//uint256 constant GEN1_MAX = 10_000;
