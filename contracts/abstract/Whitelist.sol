@@ -20,6 +20,16 @@ abstract contract Whitelist is Initializable {
 		return merkleRoot != bytes32(0);
 	}
 
+	modifier whenWhitelisted {
+		if (!whitelisted()) revert WhitelistNotEnabled();
+		_;
+	}
+
+	modifier whenNotWhitelisted {
+		if (whitelisted()) revert WhitelistIsEnabled();
+		_;
+	}
+
 	/**
 	 * Checks if an account is whitelisted using the given proof
 	 * @param _account Account to verify

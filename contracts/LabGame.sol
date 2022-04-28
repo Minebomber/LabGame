@@ -138,9 +138,8 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _amount Number of tokens to mint
 	 * @param _merkleProof Merkle proof to verify whitelisted account
 	 */
-	function whitelistMint(uint256 _amount, bytes32[] calldata _merkleProof) external payable whenNotPaused zeroPending(_msgSender()) {
+	function whitelistMint(uint256 _amount, bytes32[] calldata _merkleProof) external payable whenNotPaused whenWhitelisted zeroPending(_msgSender()) {
 		// Verify account & amount
-		if (!whitelisted()) revert WhitelistNotEnabled();
 		if (!_whitelisted(_msgSender(), _merkleProof)) revert NotWhitelisted(_msgSender());
 		if (_amount == 0 || _amount > WHITELIST_MINT_LIMIT) revert InvalidMintAmount(_amount);
 		if (balanceOf(_msgSender()) + _amount > WHITELIST_MINT_LIMIT) revert LimitExceeded(_msgSender());
@@ -160,8 +159,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 * @param _amount Number of tokens to mint
 	 * @param _burnIds Token Ids to burn as payment (for gen 1 & 2)
 	 */
-	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused zeroPending(_msgSender()) {
-		if (whitelisted()) revert WhitelistIsEnabled();
+	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused whenNotWhitelisted zeroPending(_msgSender()) {
 		// Verify amount
 		if (_amount == 0 || _amount > PUBLIC_MINT_LIMIT) revert InvalidMintAmount(_amount);
 		// Verify generation and price
