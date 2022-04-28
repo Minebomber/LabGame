@@ -35,10 +35,6 @@ describe('Blueprint', function () {
 			'BLUEPRINT',
 			this.serum.address,
 			this.labGame.address,
-			this.vrf.address,
-			KEY_HASH,
-			SUBSCRIPTION_ID,
-			CALLBACK_GAS_LIMIT
 		);
 
 		await this.serum.addController(this.labGame.address);
@@ -69,7 +65,7 @@ describe('Blueprint', function () {
 		await this.vrf.fulfillRequests();
 
 		// Generation 3
-		await this.labGame.connect(this.accounts[0]).mint(2, []);
+		await this.labGame.connect(this.accounts[0]).mint(2, [7, 8]);
 		await this.vrf.fulfillRequests();
 	});
 
