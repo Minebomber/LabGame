@@ -28,14 +28,10 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	uint256 constant GEN2_PRICE = 12_500 ether;
 	uint256 constant GEN3_PRICE = 45_000 ether;
 	
-	//uint256 constant GEN0_MAX =  5_000;
-	//uint256 constant GEN1_MAX = 10_000;
-	//uint256 constant GEN2_MAX = 15_000;
-	//uint256 constant GEN3_MAX = 20_000;
-	uint256 constant GEN0_MAX = 4;
-	uint256 constant GEN1_MAX = 8;
-	uint256 constant GEN2_MAX = 12;
-	uint256 constant GEN3_MAX = 16;
+	uint256 constant GEN0_MAX =  5_000;
+	uint256 constant GEN1_MAX = 10_000;
+	uint256 constant GEN2_MAX = 15_000;
+	uint256 constant GEN3_MAX = 20_000;
 
 	uint256 constant WHITELIST_MINT_LIMIT = 2;
 	uint256 constant PUBLIC_MINT_LIMIT = 4;
@@ -253,33 +249,6 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		return tokens[_tokenId];
 	}
 
-	/**
-	 * Override transfer to save serum claims for previous owner
-	 * @param _from Previous owner address
-	 * @param _to New owner address
-	 * @param _tokenId ID of token being transferred
-	 */
-	function transferFrom(address _from, address _to, uint256 _tokenId) public override (ERC721Upgradeable, IERC721Upgradeable)  {
-		// Update serum claim
-		serum.updateClaim(_from, _tokenId);
-		// Perform transfer
-		ERC721Upgradeable.transferFrom(_from, _to, _tokenId);
-	}
-
-	/**
-	 * Override transfer to save serum claims for previous owner
-	 * @param _from Previous owner address
-	 * @param _to New owner address
-	 * @param _tokenId ID of token being transferred
-	 * @param _data Transfer data
-	 */
-	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) public override (ERC721Upgradeable, IERC721Upgradeable) {
-		// Update serum claim
-		serum.updateClaim(_from, _tokenId);
-		// Perform transfer
-		ERC721Upgradeable.safeTransferFrom(_from, _to, _tokenId, _data);
-	}
-
 	// -- INTERNAL --
 
 	/**
@@ -333,6 +302,17 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	function _selectTrait(uint256 _seed, uint256 _trait) internal view returns (uint256) {
 		uint256 i = (_seed & 0xFF) % rarities[_trait].length;
 		return (((_seed >> 8) & 0xFF) < rarities[_trait][i]) ? i : aliases[_trait][i];
+	}
+
+	/**
+	 * Use beforeTransfer hook to update serum claims for tokens
+	 * Applies before token transfer and burn
+	 * @param _from Current token owner
+	 * @param _tokenId Token ID
+	 */
+	function _beforeTokenTransfer(address _from, address, uint256 _tokenId) internal override {
+		if (_from == address(0)) return; // Ignore mints
+		serum.updateClaim(_from, _tokenId);
 	}
 
 	// -- OWNER --
