@@ -45,11 +45,11 @@ contract TestVRFCoordinatorV2  {
 	}
 
 	function random(uint256 seed) internal view returns (uint256) {
-		return uint256(keccak256(abi.encodePacked(
+		return (uint256(keccak256(abi.encodePacked(
 			tx.origin,
 			blockhash(block.number - 1),
 			block.timestamp,
 			seed
-		)));
+		))) << 16) | 1;
 	}
 }
