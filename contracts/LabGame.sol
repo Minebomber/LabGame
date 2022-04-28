@@ -37,7 +37,8 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	uint256 constant GEN2_MAX = 12;
 	uint256 constant GEN3_MAX = 16;
 
-	uint256 constant MINT_LIMIT = 2;
+	uint256 constant WHITELIST_MINT_LIMIT = 2;
+	uint256 constant PUBLIC_MINT_LIMIT = 4;
 
 	uint256 constant MAX_TRAITS = 16;
 	uint256 constant TYPE_OFFSET = 9;
@@ -145,8 +146,8 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		// Verify account & amount
 		if (!whitelisted()) revert WhitelistNotEnabled();
 		if (!_whitelisted(_msgSender(), _merkleProof)) revert NotWhitelisted(_msgSender());
-		if (_amount == 0 || _amount > MINT_LIMIT) revert InvalidMintAmount(_amount);
-		if (balanceOf(_msgSender()) + _amount > MINT_LIMIT) revert LimitExceeded(_msgSender());
+		if (_amount == 0 || _amount > WHITELIST_MINT_LIMIT) revert InvalidMintAmount(_amount);
+		if (balanceOf(_msgSender()) + _amount > WHITELIST_MINT_LIMIT) revert LimitExceeded(_msgSender());
 		// Verify generation
 		uint256 id = totalMinted();
 		if (id >= GEN0_MAX) revert SoldOut();
@@ -166,7 +167,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused zeroPending(_msgSender()) {
 		if (whitelisted()) revert WhitelistIsEnabled();
 		// Verify amount
-		if (_amount == 0 || _amount > MINT_LIMIT) revert InvalidMintAmount(_amount);
+		if (_amount == 0 || _amount > PUBLIC_MINT_LIMIT) revert InvalidMintAmount(_amount);
 		// Verify generation and price
 		uint256 id = totalMinted();
 		if (id >= GEN3_MAX) revert SoldOut();
@@ -177,8 +178,8 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		if (id < GEN0_MAX) {
 			if (max > GEN0_MAX) revert GenerationLimit(0);
 			if (msg.value < _amount * GEN0_PRICE) revert NotEnoughEther(msg.value, _amount * GEN0_PRICE);
-			// Account limit of MINT_LIMIT not including whitelist mints
-			if (balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount > MINT_LIMIT)
+			// Account limit of PUBLIC_MINT_LIMIT not including whitelist mints
+			if (balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount > PUBLIC_MINT_LIMIT)
 				revert LimitExceeded(_msgSender());
 
 		// Generation 1
