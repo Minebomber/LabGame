@@ -220,6 +220,16 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	}
 
 	/**
+	 * Reveal pending mints
+	 */
+	function reveal() external whenNotPaused {
+		(, uint256 count) = pendingOf(_msgSender());
+		_reveal(_msgSender());
+		// Tokens minted, update offset
+		tokenOffset -= count;
+	}
+
+	/**
 	 * Get the metadata uri for a token
 	 * @param _tokenId Token ID to query
 	 * @return Token metadata json URI
@@ -247,52 +257,21 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		return tokens[_tokenId];
 	}
 
-	/**
-	 * Override transfer to save serum claims for previous owner
-	 * @param _from Previous owner address
-	 * @param _to New owner address
-	 * @param _tokenId ID of token being transferred
-	 */
-	function transferFrom(address _from, address _to, uint256 _tokenId) public override (ERC721Upgradeable, IERC721Upgradeable)  {
-		// Update serum claim
-		serum.updateClaim(_from, _tokenId);
-		// Perform transfer
-		ERC721Upgradeable.transferFrom(_from, _to, _tokenId);
-	}
-
-	/**
-	 * Override transfer to save serum claims for previous owner
-	 * @param _from Previous owner address
-	 * @param _to New owner address
-	 * @param _tokenId ID of token being transferred
-	 * @param _data Transfer data
-	 */
-	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) public override (ERC721Upgradeable, IERC721Upgradeable) {
-		// Update serum claim
-		serum.updateClaim(_from, _tokenId);
-		// Perform transfer
-		ERC721Upgradeable.safeTransferFrom(_from, _to, _tokenId, _data);
-	}
-
 	// -- INTERNAL --
 
-	/**
-	 * Override random fulfillment to generate and update tokenOffset
-	 * @param _requestId Request ID that was fulfilled
-	 * @param _randomWords Received random numbers
-	 */
-	function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
-		tokenOffset -= _randomWords.length;
-		Generator.fulfillRandomWords(_requestId, _randomWords);
+	function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal override {
+		super._beforeTokenTransfer(_from, _to, _tokenId);
+		// Update serum claim on transfer and burn
+		if (_from != address(0))
+			serum.updateClaim(_from, _tokenId);
 	}
 
 	/**
 	 * Generate and mint pending token using random seed
-	 * @param _account Address receiving token
 	 * @param _tokenId Token ID to reveal
 	 * @param _seed Random seed
 	 */
-	function _revealToken(address _account, uint256 _tokenId, uint256 _seed) internal override {
+	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {
 		// Calculate generation of token
 		uint256 token;
 		if (_tokenId <= GEN0_MAX) {}
@@ -310,12 +289,12 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		// Save traits
 		tokens[_tokenId] = token;
 		// Mint token
-		_safeMint(_account, _tokenId);
+		_safeMint(_msgSender(), _tokenId);
 		// Setup serum claim for token
 		serum.initializeClaim(_tokenId);
 		// Mint blueprint to gen3 scientists
 		if (token & 0xFF == 3)
-			blueprint.mint(_account, _seed >> 16);
+			blueprint.mint(_msgSender(), _seed >> 16);
 	}
 
 	/**

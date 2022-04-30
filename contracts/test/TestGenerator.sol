@@ -54,5 +54,5 @@ contract TestGenerator is Generator {
 		_request(_account, _base, _count);
 	}
 	
-	function _revealToken(address _account, uint256 _tokenId, uint256 _seed) internal override {}
+	function _revealToken(uint256 _tokenId, uint256 _seed) internal override {}
 }

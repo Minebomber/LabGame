@@ -10,6 +10,7 @@ error AcountHasNoPendingMint(address _account);
 error InvalidAccount();
 error InvalidRequestBase();
 error InvalidRequestCount();
+error RevealNotReady();
 
 abstract contract Generator is VRFConsumerBaseV2Upgradable {
 	VRFCoordinatorV2Interface internal vrfCoordinator;
@@ -20,11 +21,13 @@ abstract contract Generator is VRFConsumerBaseV2Upgradable {
 	struct Mint {
 		uint64 base;
 		uint32 count;
+		uint256[] random;
 	}
 	mapping(uint256 => address) internal mintRequests;
 	mapping(address => Mint) internal pendingMints;
 
 	event Requested(address indexed _account, uint256 _baseId, uint256 _count);
+	event Pending(address indexed _account, uint256 _baseId, uint256 _count);
 	event Revealed(address indexed _account, uint256 _tokenId);
 
 	/**
@@ -60,7 +63,7 @@ abstract contract Generator is VRFConsumerBaseV2Upgradable {
 	 * @return Pending token base ID, amount of pending tokens
 	 */
 	function pendingOf(address _account) public view returns (uint256, uint256) {
-		return (pendingMints[_account].base, pendingMints[_account].count);
+		return (pendingMints[_account].base, pendingMints[_account].random.length);
 	}
 
 	// -- INTERNAL --
@@ -75,14 +78,11 @@ abstract contract Generator is VRFConsumerBaseV2Upgradable {
 		address account = mintRequests[_requestId];
 		delete mintRequests[_requestId];
 
-		Mint memory mint = pendingMints[account];
-		delete pendingMints[account];
+		// Update pending mints with received random numbers
+		pendingMints[account].random = _randomWords;
 
-		// Generate tokens
-		for (uint256 i; i < mint.count; i++) {
-			_revealToken(account, mint.base + i, _randomWords[i]);
-			emit Revealed(account, mint.base + i);
-		}
+		// Ready to reveal
+		emit Pending(account, pendingMints[account].base, _randomWords.length);
 	}
 
 	/**
@@ -105,21 +105,35 @@ abstract contract Generator is VRFConsumerBaseV2Upgradable {
 		);
 		mintRequests[requestId] = _account;
 		// Initialize mint request with id and count
-		pendingMints[_account] = Mint(
-			uint64(_base),
-			uint32(_count)
-		);
+		pendingMints[_account].base = uint64(_base);
+		pendingMints[_account].count = uint32(_count);
 		// Mint requested
 		emit Requested(_account, _base, _count);
 	}
 
 	/**
+	 * Reveal pending tokens with received random numbers
+	 * @param _account Account to reveal for
+	 */
+	function _reveal(address _account) internal {
+		if (_account == address(0)) revert InvalidAccount();
+		Mint memory mint = pendingMints[_account];
+		if (mint.base == 0) revert AcountHasNoPendingMint(_account);
+		if (mint.random.length == 0) revert RevealNotReady();
+		delete pendingMints[_account];
+		// Generate all tokens
+		for (uint256 i; i < mint.count; i++) {
+			_revealToken(mint.base + i, mint.random[i]);
+			emit Revealed(_account, mint.base + i);
+		}
+	}
+
+	/**
 	 * Abstract function called on each token when revealing
-	 * @param _account Account receiving token
 	 * @param _tokenId Token ID to reveal
 	 * @param _seed Random number from VRF for the token
 	 */
-	function _revealToken(address _account, uint256 _tokenId, uint256 _seed) internal virtual;
+	function _revealToken(uint256 _tokenId, uint256 _seed) internal virtual;
 
 	/**
 	 * Set the VRF key hash
