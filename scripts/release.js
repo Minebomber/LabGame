@@ -25,6 +25,13 @@ async function main() {
 	// Mainnet whitelist tree, n=2858
 	const WHITELIST_ROOT = '0x2c4a74cc6e0b87c28ebc82d0b30406402df82432c73f87ae85ecc8cc046748f9';
 
+	const SERUM_ADDRESS = '0x48F4285c908f45D506c8176e024751c99ab79F1c';
+	const Serum = await (await ethers.getContractFactory('Serum')).attach(SERUM_ADDRESS);
+	const METADATA_ADDRESS = '0x7F1CA1Cb5ACb70Ca474ccC7A3e71F156e1B3Dd92';
+	const Metadata = await (await ethers.getContractFactory('Metadata')).attach(METADATA_ADDRESS);
+	const LABGAME_ADDRESS = '0x2a476B75A76b90D073D7773fB83A506C6d9A170b';
+	const LabGame = await (await ethers.getContractFactory('LabGame')).attach(LABGAME_ADDRESS);
+	/*
 	const Serum = await deployProxy(
 		'Serum',
 		'Serum',
@@ -45,22 +52,24 @@ async function main() {
 		SUBSCRIPTION_ID,
 		CALLBACK_GAS_LIMIT
 	);
+	*/
+	//await Serum.addController(LabGame.address);
 
-	await Serum.addController(LabGame.address);
-	await Serum.setLabGame(LabGame.address);
-	await Metadata.setLabGame(LabGame.address);
-	await LabGame.enableWhitelist(WHITELIST_ROOT);
-	await LabGame.pause();
+	//await LabGame.enableWhitelist(WHITELIST_ROOT);
+	//await LabGame.pause();
+	//await Serum.setLabGame(LabGame.address);
+	//await Metadata.setLabGame(LabGame.address);
 
 	// Traits upload
-	for (let i = 0; i < 16; i++) {
+	for (let i = 15; i < 16; i++) {
 		console.log('Uploading traits:', i);
-		try {
-			await Metadata.setTraits(i, TRAITS[i]);
-		} catch {
-			for (let j = 0; j < TRAITS[i].length; j++)
+		await Metadata.setTraits(i, TRAITS[i]);
+		console.log('Upload successful:', i);
+		/*try {
+		/*} catch {*/
+			/*for (let j = 0; j < TRAITS[i].length; j++)
 				await Metadata.setTrait(i, j, TRAITS[i][j]);
-		}
+		}*/
 	}
 }
 
