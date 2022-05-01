@@ -11,13 +11,20 @@ async function deployProxy(name, ...args) {
 
 async function main() {
 	// Rinkeby Setup
-	const VRF_COORDINATOR = '0x6168499c0cFfCaCD319c818142124B7A15E857ab';
-	const KEY_HASH = '0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc';
-	const SUBSCRIPTION_ID = 3429;
-	const CALLBACK_GAS_LIMIT = 150_000;
+	//const VRF_COORDINATOR = '0x6168499c0cFfCaCD319c818142124B7A15E857ab';
+	//const KEY_HASH = '0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc';
 
-	// Mainnet whitelist tree
-	const WHITELIST_ROOT = '0x170c984ef5368834692427a282e7fd16b38d2f723e017b40cf357c96d26cf604';
+	// Mainnet Setup
+	const VRF_COORDINATOR = '0x271682DEB8C4E0901D1a1550aD2e64D568E69909';
+	// 200 gwei lane
+	const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
+
+	//TODO: MAINNET SUB ID
+	const SUBSCRIPTION_ID = 3429;
+	const CALLBACK_GAS_LIMIT = 200_000;
+
+	// Mainnet whitelist tree, n=2858
+	const WHITELIST_ROOT = '0x2c4a74cc6e0b87c28ebc82d0b30406402df82432c73f87ae85ecc8cc046748f9';
 
 	const Serum = await deployProxy(
 		'Serum',

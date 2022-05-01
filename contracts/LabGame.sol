@@ -221,8 +221,9 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		}
 		
 		// Request token mint
-		_request(_msgSender(), id + 1, _amount);
 		tokenOffset += _amount;
+		publicMints[_msgSender()] += _amount;
+		_request(_msgSender(), id + 1, _amount);
 	}
 
 	/**
