@@ -292,8 +292,8 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		_safeMint(_msgSender(), _tokenId);
 		// Setup serum claim for token
 		serum.initializeClaim(_tokenId);
-		// Mint blueprint to gen3 scientists
-		if (token & 0xFF == 3)
+		// Mint blueprint to gen3 tokens
+		if (token & 3 == 3)
 			blueprint.mint(_msgSender(), _seed >> 16);
 	}
 
