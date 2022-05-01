@@ -19,8 +19,7 @@ async function main() {
 	// 200 gwei lane
 	const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
 
-	//TODO: MAINNET SUB ID
-	const SUBSCRIPTION_ID = 3429;
+	const SUBSCRIPTION_ID = 107;
 	const CALLBACK_GAS_LIMIT = 200_000;
 
 	// Mainnet whitelist tree, n=2858
@@ -37,8 +36,8 @@ async function main() {
 
 	const LabGame = await deployProxy(
 		'LabGame',
-		'LabGame',
-		'LABGAME',
+		'TheLabGame',
+		'TLG',
 		Serum.address,
 		Metadata.address,
 		VRF_COORDINATOR,

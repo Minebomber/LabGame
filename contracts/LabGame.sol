@@ -153,9 +153,9 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		if (id + _amount > GEN0_MAX) revert GenerationLimit(0);
 		if (msg.value < _amount * GEN0_PRICE) revert NotEnoughEther(msg.value, _amount * GEN0_PRICE);
 		// Request token mint
-		_request(_msgSender(), id + 1, _amount);
 		tokenOffset += _amount;
 		whitelistMints[_msgSender()] += _amount;
+		_request(_msgSender(), id + 1, _amount);
 	}
 
 	/**
