@@ -16,7 +16,8 @@ async function main() {
 	const SUBSCRIPTION_ID = 3429;
 	const CALLBACK_GAS_LIMIT = 150_000;
 
-	const WHITELIST_ROOT = '0x809ba8467050067e579fdc6b0941d545ae747a6de9baa32f4b7d48bf92887de5';
+	// Mainnet whitelist tree
+	const WHITELIST_ROOT = '0x170c984ef5368834692427a282e7fd16b38d2f723e017b40cf357c96d26cf604';
 
 	const Serum = await deployProxy(
 		'Serum',

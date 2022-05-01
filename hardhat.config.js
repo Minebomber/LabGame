@@ -23,10 +23,12 @@ module.exports = {
 			url: process.env.RINKEBY_RPC_URL,
 			accounts: [process.env.RINKEBY_PRIVATE_KEY],
 		},
+		/*
 		mainnet: {
 			url: process.env.MAINNET_RPC_URL,
 			accounts: [process.env.MAINNET_PRIVATE_KEY],
 		}
+		*/
 	},
 	etherscan: {
 		apiKey: {

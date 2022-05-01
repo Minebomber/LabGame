@@ -41,6 +41,7 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 
 	mapping(uint256 => uint256) tokens;
 	mapping(address => uint256) whitelistMints;
+	mapping(address => uint256) publicMints;
 
 	uint256 tokenOffset;
 
@@ -142,7 +143,10 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		// Verify account & amount
 		if (!_whitelisted(_msgSender(), _merkleProof)) revert NotWhitelisted(_msgSender());
 		if (_amount == 0 || _amount > WHITELIST_MINT_LIMIT) revert InvalidMintAmount(_amount);
-		if (balanceOf(_msgSender()) + _amount > WHITELIST_MINT_LIMIT) revert LimitExceeded(_msgSender());
+		if (
+			(balanceOf(_msgSender()) + _amount > WHITELIST_MINT_LIMIT) ||
+			(whitelistMints[_msgSender()] + _amount > WHITELIST_MINT_LIMIT)
+		) revert LimitExceeded(_msgSender());
 		// Verify generation
 		uint256 id = totalMinted();
 		if (id >= GEN0_MAX) revert SoldOut();
@@ -173,8 +177,10 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 			if (max > GEN0_MAX) revert GenerationLimit(0);
 			if (msg.value < _amount * GEN0_PRICE) revert NotEnoughEther(msg.value, _amount * GEN0_PRICE);
 			// Account limit of PUBLIC_MINT_LIMIT not including whitelist mints
-			if (balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount > PUBLIC_MINT_LIMIT)
-				revert LimitExceeded(_msgSender());
+			if (
+				(balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount > PUBLIC_MINT_LIMIT) ||
+				(publicMints[_msgSender()] + _amount > PUBLIC_MINT_LIMIT)
+			)	revert LimitExceeded(_msgSender());
 
 		// Generation 1
 		} else if (id < GEN1_MAX) {
