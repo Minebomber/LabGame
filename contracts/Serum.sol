@@ -12,6 +12,7 @@ error NotReady();
 error NotOwned(address _account, uint256 _tokenId);
 error NotAuthorized(address _sender, address _expected);
 
+// Serum V2.0
 contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeable, IClaimable {
 	bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 	
@@ -26,6 +27,8 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 	uint256 constant GEN3_TAX = 200; // 20.0%
 
 	uint256 constant CLAIM_PERIOD = 1 days;
+
+	uint256 constant TOTAL_SUPPLY = 277750000 ether; // @since V2.0
 
 	mapping(uint256 => uint256) public tokenClaims; // tokenId => value
 
@@ -57,6 +60,10 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 	 * Claim rewards for owned tokens
 	 */
 	function claim() external override whenNotPaused {
+		uint256 totalSerum = totalSupply();
+		if (totalSerum >= TOTAL_SUPPLY)
+			revert NoClaimAvailable(_msgSender());
+
 		uint256 count = labGame.balanceOf(_msgSender());
 		uint256 amount;
 		// Iterate wallet for scientists
@@ -77,7 +84,9 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 		// Include pending claim balance
 		amount += pendingClaims[_msgSender()];
 		delete pendingClaims[_msgSender()];
+
 		// Verify amount and mint
+		if (totalSerum + amount > TOTAL_SUPPLY) amount = TOTAL_SUPPLY - totalSerum;
 		if (amount == 0) revert NoClaimAvailable(_msgSender());
 		_mint(_msgSender(), amount);
 		emit Claimed(_msgSender(), amount);

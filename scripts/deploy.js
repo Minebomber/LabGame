@@ -17,14 +17,14 @@ async function deployProxy(name, ...args) {
 }
 
 async function main() {
-	//const VRF_COORDINATOR = '0x514910771af9ca656af840dff83e8264ecf986ca';
+	const VRF_COORDINATOR = '0x514910771af9ca656af840dff83e8264ecf986ca';
 	const KEY_HASH = '0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef';
 	const SUBSCRIPTION_ID = 0;
 	const CALLBACK_GAS_LIMIT = 100_000;
-
+	/*
 	const TestVRFCoordinator = await deployContract(
 		'TestVRFCoordinatorV2'
-	);
+	);*/
 	const Serum = await deployProxy(
 		'Serum',
 		'Serum',
@@ -39,11 +39,12 @@ async function main() {
 		'LABGAME',
 		Serum.address,
 		Metadata.address,
-		TestVRFCoordinator.address,
+		VRF_COORDINATOR,
 		KEY_HASH,
 		SUBSCRIPTION_ID,
 		CALLBACK_GAS_LIMIT
 	);
+	/*
 	const Blueprint = await deployProxy(
 		'Blueprint',
 		'Blueprint',
@@ -56,15 +57,15 @@ async function main() {
 		'Laboratory',
 		'LABORATORY',
 		Blueprint.address
-	);
+	);*/
 	await Serum.addController(LabGame.address);
-	await Serum.addController(Blueprint.address);
+	//await Serum.addController(Blueprint.address);
 	await Serum.setLabGame(LabGame.address);
 	await Metadata.setLabGame(LabGame.address);
-	await LabGame.setBlueprint(Blueprint.address);
+	//await LabGame.setBlueprint(Blueprint.address);
 	// Whitelist for accounts 0-9 + ... => 2500 acct whitelist
-	await LabGame.enableWhitelist('0x809ba8467050067e579fdc6b0941d545ae747a6de9baa32f4b7d48bf92887de5');
-	await Blueprint.setLaboratory(Laboratory.address);
+	//await LabGame.enableWhitelist('0x809ba8467050067e579fdc6b0941d545ae747a6de9baa32f4b7d48bf92887de5');
+	//await Blueprint.setLaboratory(Laboratory.address);
 	// Traits upload
 	for (let i = 0; i < 16; i++) {
 		console.log('Uploading traits:', i);
@@ -75,13 +76,14 @@ async function main() {
 				await Metadata.setTrait(i, j, TRAITS[i][j]);
 		}
 	}
-
+	/*
 	TestVRFCoordinator.on('Requested', async () => {
 		await TestVRFCoordinator.fulfillRequests();
-	});
+	});*/
 }
 
 main()
+	.then(() => process.exit(0))
 	.catch(error => {
 		console.error(error);
 		process.exit(1);

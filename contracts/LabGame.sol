@@ -21,20 +21,24 @@ error InvalidBurnLength(uint256 _given, uint256 _expected);
 error BurnNotOwned(address _sender, uint256 _tokenId);
 error InvalidBurnGeneration(uint256 _given, uint256 _expected);
 error BlueprintNotReady();
+error EarlyMintIsEnabled();
+error EarlyMintNotEnabled();
 
+// LabGame V2.0
 contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, Generator, Whitelist {
-	uint256 constant GEN0_PRICE = 0.06 ether;
+	uint256 constant GEN0_PRICE = 0 ether; // @since V2.0 Free mint
 	uint256 constant GEN1_PRICE = 5_000 ether;
 	uint256 constant GEN2_PRICE = 12_500 ether;
 	uint256 constant GEN3_PRICE = 45_000 ether;
 	
-	uint256 constant GEN0_MAX =  5_000;
-	uint256 constant GEN1_MAX = 10_000;
-	uint256 constant GEN2_MAX = 15_000;
-	uint256 constant GEN3_MAX = 20_000;
+	uint256 constant GEN0_MAX = 1_111;
+	uint256 constant GEN1_MAX = 2_222;
+	uint256 constant GEN2_MAX = 3_333;
+	uint256 constant GEN3_MAX = 4_444;
 
 	uint256 constant WHITELIST_MINT_LIMIT = 2;
-	uint256 constant PUBLIC_MINT_LIMIT = 4;
+	uint256 constant PUBLIC_MINT_LIMIT = 5;
+	uint256 constant EXTRA_MINT_LIMIT = 20;
 
 	uint256 constant MAX_TRAITS = 16;
 	uint256 constant TYPE_OFFSET = 9;
@@ -51,6 +55,9 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 
 	uint8[][MAX_TRAITS] rarities;
 	uint8[][MAX_TRAITS] aliases;
+
+	bool public earlyMintEnabled; // @since V2.0
+	mapping(address => bool) public extraMintAccounts;
 
 	/**
 	 * LabGame constructor
@@ -134,37 +141,21 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 
 	// -- EXTERNAL --
 
-	/**
-	 * Mint Gen0 scientists & mutants for whitelisted accounts
-	 * @param _amount Number of tokens to mint
-	 * @param _merkleProof Merkle proof to verify whitelisted account
-	 */
-	function whitelistMint(uint256 _amount, bytes32[] calldata _merkleProof) external payable whenNotPaused whenWhitelisted zeroPending(_msgSender()) {
-		// Verify account & amount
-		if (!_whitelisted(_msgSender(), _merkleProof)) revert NotWhitelisted(_msgSender());
-		if (_amount == 0 || _amount > WHITELIST_MINT_LIMIT) revert InvalidMintAmount(_amount);
-		if (
-			(balanceOf(_msgSender()) + _amount > WHITELIST_MINT_LIMIT) ||
-			(whitelistMints[_msgSender()] + _amount > WHITELIST_MINT_LIMIT)
-		) revert LimitExceeded(_msgSender());
-		// Verify generation
-		uint256 id = totalMinted();
-		if (id >= GEN0_MAX) revert SoldOut();
-		if (id + _amount > GEN0_MAX) revert GenerationLimit(0);
-		if (msg.value < _amount * GEN0_PRICE) revert NotEnoughEther(msg.value, _amount * GEN0_PRICE);
-		// Request token mint
-		tokenOffset += _amount;
-		whitelistMints[_msgSender()] += _amount;
-		_request(_msgSender(), id + 1, _amount);
-	}
+	// @since V2.0 - Whitelist mint no longer needed
 
 	/**
 	 * Mint scientists & mutants
 	 * @param _amount Number of tokens to mint
 	 * @param _burnIds Token Ids to burn as payment (for gen 1 & 2)
 	 */
-	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused whenNotWhitelisted zeroPending(_msgSender()) {
+	function mint(uint256 _amount, uint256[] calldata _burnIds) external payable whenNotPaused {
+		if (earlyMintEnabled)
+			revert EarlyMintIsEnabled();
+
+		uint256 publicMintCount = publicMints[_msgSender()];
+
 		// Verify amount
+		// @since V2.0 Transaction limit of 10, account limit of 20
 		if (_amount == 0 || _amount > PUBLIC_MINT_LIMIT) revert InvalidMintAmount(_amount);
 		// Verify generation and price
 		uint256 id = totalMinted();
@@ -175,11 +166,14 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		// Generation 0
 		if (id < GEN0_MAX) {
 			if (max > GEN0_MAX) revert GenerationLimit(0);
-			if (msg.value < _amount * GEN0_PRICE) revert NotEnoughEther(msg.value, _amount * GEN0_PRICE);
+			// @since V2.0 - No ether required to mint
 			// Account limit of PUBLIC_MINT_LIMIT not including whitelist mints
+			// @since V2.0 - Fix underflow bug
+			uint256 currentBalance = balanceOf(_msgSender());
+			uint256 whitelistMintCount = whitelistMints[_msgSender()];
 			if (
-				(balanceOf(_msgSender()) - whitelistMints[_msgSender()] + _amount > PUBLIC_MINT_LIMIT) ||
-				(publicMints[_msgSender()] + _amount > PUBLIC_MINT_LIMIT)
+				(currentBalance >= whitelistMintCount && currentBalance - whitelistMintCount + _amount > PUBLIC_MINT_LIMIT) ||
+				(publicMintCount + _amount > PUBLIC_MINT_LIMIT)
 			)	revert LimitExceeded(_msgSender());
 
 		// Generation 1
@@ -220,10 +214,51 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 			if (burnLength != 0) revert InvalidBurnLength(burnLength, 0);
 		}
 		
+		publicMints[_msgSender()] = publicMintCount + _amount;
 		// Request token mint
-		tokenOffset += _amount;
-		publicMints[_msgSender()] += _amount;
-		_request(_msgSender(), id + 1, _amount);
+		// @since V2.0 - Single transaction mint
+		// Token id to mint in [id + 1, id + _amount]
+		max++;
+		for (uint i = id + 1; i < max; i++) {
+			uint256 seed = _random(i);
+			_revealToken(i, seed);
+		}
+	}
+
+	function earlyMint(uint256 _amount) external whenNotPaused {
+		if (!earlyMintEnabled) revert EarlyMintNotEnabled(); // Only when early mint enabled
+		uint256 whitelistMintCount = whitelistMints[_msgSender()];
+		uint256 publicMintCount = publicMints[_msgSender()];
+		bool hasExtraMints = extraMintAccounts[_msgSender()];
+		if (whitelistMintCount == 0 && publicMintCount == 0 && hasExtraMints == false)
+			revert EarlyMintIsEnabled();
+
+		uint256 limit = hasExtraMints ? EXTRA_MINT_LIMIT : PUBLIC_MINT_LIMIT;
+		// Verify amount
+		// @since V2.0 Transaction limit of 10, account limit of 20
+		if (_amount == 0 || _amount > limit) revert InvalidMintAmount(_amount);
+		// Verify generation and price
+		uint256 id = totalMinted();
+		uint256 max = id + _amount;
+		if (id >= GEN0_MAX || max > GEN0_MAX) revert GenerationLimit(0);
+
+		// @since V2.0 - No ether required to mint
+		// Account limit of PUBLIC_MINT_LIMIT not including whitelist mints
+		// @since V2.0 - Fix underflow bug
+		uint256 currentBalance = balanceOf(_msgSender());
+		if (
+			(currentBalance >= whitelistMintCount && currentBalance - whitelistMintCount + _amount > limit) ||
+			(publicMintCount + _amount > limit)
+		)	revert LimitExceeded(_msgSender());
+
+		publicMints[_msgSender()] = publicMintCount + _amount;
+		// Request token mint
+		// @since V2.0 - Single transaction mint
+		// Token id to mint in [id + 1, id + _amount]
+		max++;
+		for (uint i = id + 1; i < max; i++) {
+			_revealToken(i, _random(i));
+		}
 	}
 
 	/**
@@ -286,7 +321,8 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		else if (_tokenId <= GEN2_MAX) token = 2;
 		else if (_tokenId <= GEN3_MAX) token = 3;
 		// Select scientist or mutant
-		token |= (((_seed & 0xFFFF) % 10) == 0) ? 128 : 0;
+		// @since V2.0 Mint mutants at 2%
+		token |= (((_seed & 0xFFFF) % 100) < 2) ? 128 : 0;
 		// Loop over tokens traits (9 scientist, 8 mutant)
 		(uint256 start, uint256 count) = (token & 128 != 0) ? (TYPE_OFFSET, MAX_TRAITS - TYPE_OFFSET) : (0, TYPE_OFFSET);
 		for (uint256 i; i < count; i++) {
@@ -315,21 +351,45 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 		return (((_seed >> 8) & 0xFF) < rarities[_trait][i]) ? i : aliases[_trait][i];
 	}
 
+	/**
+	 * Generate a psuedo-random number
+	 * @param _seed Seed for the RNG
+	 * @return Random 256 bit number
+	 */
+	function _random(uint256 _seed) internal view returns (uint256) {
+		return uint256(keccak256(abi.encodePacked(
+			tx.origin,
+			blockhash(block.number - 1),
+			block.timestamp,
+			_seed
+		)));
+	}
+
 	// -- OWNER --
 
 	/**
-	 * Enable the whitelist
-	 * @param _merkleRoot Root hash of the whitelist merkle tree
+	 * Enable/disable holder only early mint
 	 */
-	function enableWhitelist(bytes32 _merkleRoot) external onlyOwner {
-		_enableWhitelist(_merkleRoot);
+	function setEarlyMintEnabled(bool _earlyMintEnabled) external onlyOwner {
+		earlyMintEnabled = _earlyMintEnabled;
 	}
 
 	/**
-	 * Disable the whitelist
+	 * Add account to the early mint
+	 * @param _accounts Account to add
 	 */
-	function disableWhitelist() external onlyOwner {
-		_disableWhitelist();
+	function addEarlyMintAccounts(address[] calldata _accounts) external onlyOwner {
+		for (uint256 i; i < _accounts.length; i++)
+			whitelistMints[_accounts[i]]++;
+	}
+
+	/**
+	 * Add account to the extra mint list
+	 * @param _accounts Account to add
+	 */
+	function addExtraMintAccounts(address[] calldata _accounts) external onlyOwner {
+		for (uint256 i; i < _accounts.length; i++)
+			extraMintAccounts[_accounts[i]] = true;
 	}
 
 	/**
@@ -352,30 +412,6 @@ contract LabGame is ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpg
 	 */
 	function setBlueprint(address _blueprint) external onlyOwner {
 		blueprint = IBlueprint(_blueprint);
-	}
-
-	/**
-	 * Set the VRF key hash
-	 * @param _keyHash New keyHash
-	 */
-	function setKeyHash(bytes32 _keyHash) external onlyOwner {
-		_setKeyHash(_keyHash);
-	}
-
-	/**
-	 * Set the VRF subscription ID
-	 * @param _subscriptionId New subscriptionId
-	 */
-	function setSubscriptionId(uint64 _subscriptionId) external onlyOwner {
-		_setSubscriptionId(_subscriptionId);
-	}
-
-	/**
-	 * Set the VRF callback gas limit
-	 * @param _callbackGasLimit New callbackGasLimit
-	 */
-	function setCallbackGasLimit(uint32 _callbackGasLimit) external onlyOwner {
-		_setCallbackGasLimit(_callbackGasLimit);
 	}
 
 	/**
