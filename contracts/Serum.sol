@@ -32,8 +32,8 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 
 	mapping(uint256 => uint256) public tokenClaims; // tokenId => value
 
-	uint256[4] mutantEarnings;
-	uint256[4] mutantCounts;
+	uint256[4] public mutantEarnings;
+	uint256[4] public mutantCounts;
 
 	mapping(address => uint256) public pendingClaims; 
 
@@ -70,7 +70,8 @@ contract Serum is ERC20Upgradeable, AccessControlUpgradeable, PausableUpgradeabl
 		for (uint256 i; i < count; i++) {
 			uint256 tokenId = labGame.tokenOfOwnerByIndex(_msgSender(), i);
 			uint256 token = labGame.getToken(tokenId);
-			amount += _claimScientist(tokenId, token & 3);
+			if (token & 128 == 0)
+				amount += _claimScientist(tokenId, token & 3);
 		}
 		// Pay mutant tax
 		amount = _payTax(amount);
